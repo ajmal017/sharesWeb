@@ -1,0 +1,1 @@
+/home/nfs/raspiWeb/raspiWeb/backoffice/tgScripts/globalVars.py
