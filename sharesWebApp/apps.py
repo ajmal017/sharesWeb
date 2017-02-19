@@ -5,3 +5,4 @@ from django.apps import AppConfig
 
 class ShareswebappConfig(AppConfig):
     name = 'sharesWebApp'
+    verbose_name = 'Bolsa'

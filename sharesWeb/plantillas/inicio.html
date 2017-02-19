@@ -2,7 +2,22 @@
 
 {% block content %}
    <h4>
-	Ticker: {{ Name }}
-        UltimoValor: {{ LastDayClose }}
+        {% for share in shares %}
+            Acción: {{ share.Name }}
+            UltimoValor: {{ share.Value }}
+            Fecha: {{ share.Datetime }}
+            <p>
+        {% endfor %}
+   </h4>
+   <hr>
+   <h4>
+
+        {% for currency in currencys %}
+            Divisa: {{ currency.Name }}
+            UltimoValor: {{ currency.Value }}
+            Fecha: {{ currency.Datetime }}
+            <p>
+        {% endfor %}
    </h4>
 {% endblock %}
+
