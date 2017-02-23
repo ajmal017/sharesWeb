@@ -1,10 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#from django.core.urlresolvers import reverse
+from django.utils.html import format_html
 from django.contrib import admin
 from models import Currency, Broker, Index, Period, Fond, Share, Alarm, ShareFonds
 from models import Transaction, Dividend
 
 
 class CurrencyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'symbol', 'ticker', 'lastValue', 'datetime')
+    list_display = ('name', 'symbol', 'ticker', 'lastValue', 'datetime', 'close', 'change', 'openValue')
     search_fields = ('name', )
 
 
@@ -30,7 +35,7 @@ class FondAdmin(admin.ModelAdmin):
 
 
 class ShareAdmin(admin.ModelAdmin):
-    list_display = ('name', 'ISIN', 'index', 'ticker', 'update', 'lastValue', 'datetime')
+    list_display = ('name', 'ISIN', 'index', 'ticker', 'update', 'lastValue', 'datetime', 'close', 'change', 'openValue')
     search_fields = ('name', 'ISIN', 'ticker')
 
 
@@ -47,10 +52,28 @@ class ShareFondsAdmin(admin.ModelAdmin):
 
 
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('dateBuy','share','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','profit','profitability')
+    #list_display = ('dateBuy','share','getShareLink','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','profit','profitability')
+    list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','profit','profitability')
     search_fields = ('share', )
     raw_id_fields = ('share', )
     date_hierarchy = 'dateBuy'
+
+    def getShareLastValue(self, obj):
+        return obj.share.lastValue
+    getShareLastValue.short_description = 'Precio'
+
+    # def getShareLink(self, obj):
+    #     url = reverse('admin:share_name_changelist')
+    #     html = '<a href="{0}?share__id__exact={1}">{2}</a>'
+    #     return html.format(url, obj.id, obj.name)
+    # getShareLink.allow_tags = True
+    # getShareLink.short_description = 'Nositelji'        
+
+#     def link_to_share(self, share):
+# https://share.sergutpal.dynu.com/admin/sharesWebApp/share/4/change/
+#         link=urlresolvers.reverse("admin:sharesWebApp_b_change", args=[obj.B.id]) #model name has to be lowercase
+#         return u'<a href="%s">%s</a>' % (link,obj.B.name)
+#     link_to_B.allow_tags=True
 
 
 class DividendAdmin(admin.ModelAdmin):

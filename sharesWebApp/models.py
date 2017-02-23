@@ -3,7 +3,7 @@
 
 from __future__ import unicode_literals
 from django.db import models
-import datetime
+from django.utils import timezone
 import globalVars
 
 
@@ -13,6 +13,9 @@ class Currency(models.Model):
     ticker = models.CharField(max_length=20, blank=True, null=True, verbose_name='Ticker')
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
+    close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
+    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio')
+    openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
     class Meta:
@@ -90,6 +93,9 @@ class Share(models.Model):
     fonds = models.ManyToManyField(Fond, through='ShareFonds', through_fields=('share', 'fond'))
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
+    close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
+    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio')
+    openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
     class Meta:
@@ -207,7 +213,7 @@ class Transaction(models.Model):
         try:
             if self.pk is not None:
                 if self.dateSell is None:
-                    dateTo = datetime.datetime.now().date()
+                    dateTo = timezone.now().date()
                 else:
                     dateTo = self.dateSell
                 return (dateTo - self.dateBuy).days

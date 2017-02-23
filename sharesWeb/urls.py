@@ -14,11 +14,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 from django.conf.urls import url
+from django.conf.urls import include
 from django.contrib import admin
+
 
 from sharesWeb.views import inicio
 
 urlpatterns = [
+    url(r'^grappelli/', include('grappelli.urls')), # grappelli URLS
     url(r'^admin/', admin.site.urls),
     url(r'^$', inicio),
 ]

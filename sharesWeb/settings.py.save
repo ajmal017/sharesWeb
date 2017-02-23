@@ -11,11 +11,11 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+import sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PROJECT_ROOT = os.path.dirname(__file__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "backoffice"))
 
 # Quick-start development settings - unsuitable for production
@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'celery',
+#    'sharesWebApp.apps.ShareswebappConfig',
     'sharesWebApp',
 ]
 
@@ -50,15 +52,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #'shareWeb.middleware.cubieSrvMiddleware.CubieSrvMiddleware',
-
+    'sharesWeb.middleware.cubieSrvMiddleware.CubieSrvMiddleware',
+]
 
 ROOT_URLCONF = 'sharesWeb.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(os.path.dirname(__file__), 'plantillas').replace('\\', '/'), ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -114,7 +116,7 @@ AUTH_PASSWORD_VALIDATORS = [
 #LANGUAGE_CODE = 'en-us'
 LANGUAGE_CODE = 'es'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'UT'
 
 USE_I18N = True
 

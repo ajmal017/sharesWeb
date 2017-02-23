@@ -33,14 +33,18 @@ ALLOWED_HOSTS = ['cubieSrv', 'share.sergutpal.dynu.com']
 # Application definition
 
 INSTALLED_APPS = [
+    'grappelli',
+#    'suit',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'djcelery',
-    'sharesWebApp.apps.ShareswebappConfig',
+    'sharesWebApp',
+    'celery',
+    'django_celery_beat',
+#    'sharesWebApp.apps.ShareswebappConfig',
 ]
 
 MIDDLEWARE = [
@@ -115,13 +119,14 @@ AUTH_PASSWORD_VALIDATORS = [
 #LANGUAGE_CODE = 'en-us'
 LANGUAGE_CODE = 'es'
 
-TIME_ZONE = 'UTC'
+#TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Madrid'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -129,3 +134,4 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+
