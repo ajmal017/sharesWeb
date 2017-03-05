@@ -94,7 +94,7 @@ class Share(models.Model):
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
-    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio')
+    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio (%)')
     openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
@@ -161,7 +161,11 @@ class Transaction(models.Model):
                         currency = self.share.currency.lastValue
                     else:
                         currency = 1
-                    return round((self.share.lastValue * self.sharesBuy * (1 / currency)) - self.comissionBuy, 2)
+                    if self.sharesSell > 0:
+                        numShares = self.sharesSell
+                    else:
+                        numShares = self.sharesBuy
+                    return round((self.share.lastValue * numShares * (1 / currency)) - self.comissionBuy, 2)
             else:
                 return 0
         except Exception as e:
@@ -186,6 +190,20 @@ class Transaction(models.Model):
             globalVars.toLogFile('Error getDividend: ' + str(e))
             return 0
 
+    def getRigths(self):
+        total = 0
+        try:
+            if self.pk is not None:
+                rights = Right.objects.filter(transaction=self.pk)
+                for right in rights:
+                    r = right.importGross
+                    r = r * (1 / right.currencyValue)
+                    total = total + r
+            return round(total, 2)
+        except Exception as e:
+            globalVars.toLogFile('Error getRigths: ' + str(e))
+            return 0
+
     @property
     def dividendGross(self):
         return round(self.getDividend(True), 2)
@@ -197,16 +215,33 @@ class Transaction(models.Model):
     dividendNet.fget.short_description = u'Dividendos Neto'
 
     @property
+    def rights(self):
+        return round(self.getRigths(), 2)
+    rights.fget.short_description = u'Derechos'
+
+    @property
     def profit(self):
         try:
             if self.pk is not None:
-                return round(self.priceSellTotal + self.dividendGross - self.priceBuyTotal, 2)
+                return round(self.priceSellTotal + self.dividendGross + self.rights - self.priceBuyTotal, 2)
             else:
                 return 0
         except Exception as e:
             globalVars.toLogFile('Error profit: ' + str(e))
             return 0
     profit.fget.short_description = u'Beneficio Bruto'
+
+    @property
+    def IRPF(self):
+        try:
+            if self.pk is not None:
+                return round(self.priceSellTotal + self.rights - self.priceBuyTotal, 2)
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error IRPF: ' + str(e))
+            return 0
+    IRPF.fget.short_description = u'IRPF/Plusv.'
 
     @property
     def investDays(self):
@@ -240,7 +275,7 @@ class Transaction(models.Model):
     def profitability(self):
         try:
             if self.pk is not None:
-                pf = self.priceSellTotal + self.dividendGross
+                pf = self.priceSellTotal + self.dividendGross + self.rights
                 po = self.priceBuyTotal
                 pf_div_po = pf / po
                 t = 1.0 / (float(self.investDays) / 365.0)
@@ -282,6 +317,25 @@ class Dividend(models.Model):
         return self.transaction.share.name + ' - ' + '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.transaction.broker.name
 
 
+# Esta clase permite registrar la venta residual de derechos que hacen los brokers cuando nos sobran algunos 
+# derechos. La compra de derechos, la gestionamos como compra normal y corriente de acciones normalizando 
+# los precios
+class Right(models.Model):
+    transaction = models.ForeignKey(Transaction, db_column='idTransaction', verbose_name='Transacción')
+    date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    importGross = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
+    currencyValue = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Divisa',  default=1)
+
+    class Meta:
+        db_table = "Right"
+        ordering = ["date", "transaction"]
+        verbose_name = "Derechos"
+        verbose_name_plural = "Derechos"
+
+    def __unicode__(self):
+        return self.transaction.share.name + ' - ' + '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.transaction.broker.name
+
+
 class Alarm(models.Model):
     share = models.ForeignKey(Share, db_column='idShare')
     minPrice = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Límite Inferior')
@@ -298,3 +352,26 @@ class Alarm(models.Model):
 
     def __unicode__(self):
         return self.share.name
+
+
+class Summary(models.Model):
+    date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    priceBuyCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Compra')
+    priceSellCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Venta')
+    dividendGrossCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
+    profitCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Beneficio')
+    priceBuyTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Compra')
+    priceSellTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Venta')
+    dividendGrossTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Dividendos')
+    profitTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Beneficio')
+
+
+    class Meta:
+        db_table = "Summary"
+        ordering = ["date"]
+        verbose_name = "Resumen"
+        verbose_name_plural = "Resumen"
+
+    def __unicode__(self):
+        return '{:%d/%m/%Y}'.format(self.date)
+

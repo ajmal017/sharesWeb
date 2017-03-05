@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, unicode_literals
+from django.utils import timezone
 from celery import shared_task
 from celery import app
 from datetime import datetime
-from .models import Currency, Share, Alarm
+from .models import Currency, Share, Alarm, Summary, Transaction
 from googleFinance import getShare, getCurrency
 import globalVars
-from telegramSGP import sendTelegramBot
 
 
 @shared_task
@@ -65,7 +65,7 @@ def updateCurrency():
 
 
 def msgAlarm(name, event, change, unity, lastValue):
-    msg = 'Cotización ' + name + '. El precio ' + event + ' ' + str(round(change, 1)) + ' ' + unity.lower() + '. Precio actual: ' + str(round(lastValue, 2))  + '\n'
+    msg = 'Cotizacion ' + name + '. El precio ' + event + ' ' + str(round(change, 1)) + ' ' + unity.lower() + '. Precio actual: ' + str(round(lastValue, 2))  + '\n'
     return msg
 
 
@@ -103,9 +103,56 @@ def alarmCheck():
                 res = False
                 globalVars.toLogFile('Error alarmCheck - accion: ' + share.ticker + ' ' + str(e))
         if msg:
-            sendTelegramBot('ALERTA DE BOLSA! ' + msg)
+            #sendTelegramBot('ALERTA DE BOLSA! ' + msg)
+            globalVars.toFile(globalVars.sendFile, 'ALERTA DE BOLSA! ' + msg)
         globalVars.toLogFile('alarmCheck fin: ' + str(res))
-        return True
+        return res
     except Exception as e:
-        #globalVars.toLogFile('Error alarmCheck: ' + str(e))
+        globalVars.toLogFile('Error alarmCheck: ' + str(e))
+        return False
+
+
+@shared_task
+def calcSummary():
+    try:
+        globalVars.toLogFile('calcSummary inicio')
+        res = True
+        today = timezone.now().date()
+        try:
+            summ = Summary.objects.get(date=today)
+        except Summary.DoesNotExist:
+            summ = Summary(date=today)
+        totalBuy = 0
+        totalSell = 0
+        totalDividend = 0
+        totalProfit = 0
+        currentBuy = 0
+        currentSell = 0
+        currentDividend = 0
+        currentProfit = 0
+        transacs = Transaction.objects.all()
+        for transac in transacs:
+            if not transac.priceSellUnity:
+                currentBuy = currentBuy + transac.priceBuyTotal
+                currentSell = currentSell + transac.priceSellTotal
+                currentDividend = currentDividend + transac.dividendGross
+                currentProfit = currentProfit + transac.profit
+                #globalVars.toLogFile('Accion: ' + transac.share.name + '. Beneficio: ' +str(round(transac.profit,2)))
+            totalBuy = totalBuy + transac.priceBuyTotal
+            totalSell = totalSell + transac.priceSellTotal
+            totalDividend = totalDividend + transac.dividendGross
+            totalProfit = totalProfit + transac.profit
+        summ.priceBuyTotal = totalBuy
+        summ.priceSellTotal = totalSell
+        summ.dividendGrossTotal = totalDividend
+        summ.profitTotal = totalProfit
+        summ.priceBuyCurrent = currentBuy
+        summ.priceSellCurrent = currentSell
+        summ.dividendGrossCurrent = currentDividend
+        summ.profitCurrent = currentProfit
+        summ.save()
+        globalVars.toLogFile('calcSummary fin: ' + str(res))
+        return res
+    except Exception as e:
+        globalVars.toLogFile('Error calcSummary: ' + str(e))
         return False

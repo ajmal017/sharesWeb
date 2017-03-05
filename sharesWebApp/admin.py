@@ -5,7 +5,7 @@
 from django.utils.html import format_html
 from django.contrib import admin
 from models import Currency, Broker, Index, Period, Fond, Share, Alarm, ShareFonds
-from models import Transaction, Dividend
+from models import Transaction, Dividend, Right, Summary
 
 
 class CurrencyAdmin(admin.ModelAdmin):
@@ -53,7 +53,7 @@ class ShareFondsAdmin(admin.ModelAdmin):
 
 class TransactionAdmin(admin.ModelAdmin):
     #list_display = ('dateBuy','share','getShareLink','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','profit','profitability')
-    list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','profit','profitability')
+    list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
     search_fields = ('share', )
     raw_id_fields = ('share', )
     date_hierarchy = 'dateBuy'
@@ -83,6 +83,17 @@ class DividendAdmin(admin.ModelAdmin):
     date_hierarchy = 'date'
 
 
+class RightAdmin(admin.ModelAdmin):
+    list_display = ('date', 'transaction', 'importGross')
+    search_fields = ('transaction', 'date')
+    raw_id_fields = ('transaction', )
+    date_hierarchy = 'date'
+
+
+class SummaryAdmin(admin.ModelAdmin):
+    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal')
+
+
 # Register your models here.
 admin.site.register(Currency, CurrencyAdmin)
 admin.site.register(Broker, BrokerAdmin)
@@ -94,3 +105,5 @@ admin.site.register(Alarm, AlarmAdmin)
 admin.site.register(ShareFonds, ShareFondsAdmin)
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(Dividend, DividendAdmin)
+admin.site.register(Right, RightAdmin)
+admin.site.register(Summary, SummaryAdmin)
