@@ -6,6 +6,8 @@ from django.utils.html import format_html
 from django.contrib import admin
 from models import Currency, Broker, Index, Period, Fond, Share, Alarm, ShareFonds
 from models import Transaction, Dividend, Right, Summary
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 
 
 class CurrencyAdmin(admin.ModelAdmin):
@@ -51,12 +53,12 @@ class ShareFondsAdmin(admin.ModelAdmin):
     raw_id_fields = ('share', )
 
 
-class TransactionAdmin(admin.ModelAdmin):
-    #list_display = ('dateBuy','share','getShareLink','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','profit','profitability')
+class TransactionAdmin(ImportExportModelAdmin):
     list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
     search_fields = ('share', )
     raw_id_fields = ('share', )
     date_hierarchy = 'dateBuy'
+
 
     def getShareLastValue(self, obj):
         return obj.share.lastValue
@@ -94,6 +96,17 @@ class SummaryAdmin(admin.ModelAdmin):
     list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal')
 
 
+# class TransactionResource(resources.ModelResource):
+#     list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
+
+#     class Meta:
+#         model = Transaction
+
+
+# class TransactionAdminExport(ImportExportModelAdmin):
+#     resource_class = TransactionResource
+
+
 # Register your models here.
 admin.site.register(Currency, CurrencyAdmin)
 admin.site.register(Broker, BrokerAdmin)
@@ -107,3 +120,4 @@ admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(Dividend, DividendAdmin)
 admin.site.register(Right, RightAdmin)
 admin.site.register(Summary, SummaryAdmin)
+#admin.site.register(Transaction, TransactionAdminExport)

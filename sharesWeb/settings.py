@@ -33,7 +33,7 @@ ALLOWED_HOSTS = ['cubieSrv', 'share.sergutpal.dynu.com']
 # Application definition
 
 INSTALLED_APPS = [
-    'grappelli',
+#    'grappelli',
 #    'suit',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -41,10 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'import_export',
     'sharesWebApp',
     'celery',
     'django_celery_beat',
-#    'sharesWebApp.apps.ShareswebappConfig',
 ]
 
 MIDDLEWARE = [
