@@ -125,10 +125,12 @@ def calcSummary():
         totalBuy = 0
         totalSell = 0
         totalDividend = 0
+        totalRights = 0
         totalProfit = 0
         currentBuy = 0
         currentSell = 0
         currentDividend = 0
+        currentRights = 0
         currentProfit = 0
         transacs = Transaction.objects.all()
         for transac in transacs:
@@ -136,19 +138,23 @@ def calcSummary():
                 currentBuy = currentBuy + transac.priceBuyTotal
                 currentSell = currentSell + transac.priceSellTotal
                 currentDividend = currentDividend + transac.dividendGross
+                currentRights = currentRights + transac.rights
                 currentProfit = currentProfit + transac.profit
                 #globalVars.toLogFile('Accion: ' + transac.share.name + '. Beneficio: ' +str(round(transac.profit,2)))
             totalBuy = totalBuy + transac.priceBuyTotal
             totalSell = totalSell + transac.priceSellTotal
             totalDividend = totalDividend + transac.dividendGross
+            totalRights = totalRights + transac.rights
             totalProfit = totalProfit + transac.profit
         summ.priceBuyTotal = totalBuy
         summ.priceSellTotal = totalSell
         summ.dividendGrossTotal = totalDividend
+        summ.rightsTotal = totalRights
         summ.profitTotal = totalProfit
         summ.priceBuyCurrent = currentBuy
         summ.priceSellCurrent = currentSell
         summ.dividendGrossCurrent = currentDividend
+        summ.rightsCurrent = currentRights
         summ.profitCurrent = currentProfit
         summ.save()
         globalVars.toLogFile('calcSummary fin: ' + str(res))

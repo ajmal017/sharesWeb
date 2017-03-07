@@ -108,6 +108,22 @@ class Share(models.Model):
         return self.name
 
 
+class ShareHistory(models.Model):
+    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Acción')
+    date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
+    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio (%)')
+    openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
+
+    class Meta:
+        db_table = "ShareHistory"
+        verbose_name = "Histórico Acciones"
+        verbose_name_plural = "Histórico Acciones"
+
+    def __unicode__(self):
+        return self.share.name  + ' - '  + '{:%d/%m/%Y}'.format(self.date) 
+
+
 class ShareFonds(models.Model):
     share = models.ForeignKey(Share, db_column='idShare', verbose_name='Acción')
     fond = models.ForeignKey(Fond, db_column='idFond', verbose_name='Fondo')
@@ -359,12 +375,15 @@ class Summary(models.Model):
     priceBuyCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Compra')
     priceSellCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Venta')
     dividendGrossCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
+    rightsCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     profitCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Beneficio')
     priceBuyTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Compra')
     priceSellTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Venta')
     dividendGrossTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Dividendos')
+    rightsTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     profitTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Beneficio')
-
+    liquidationValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor liquidativo')
+    numberUnits = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Participaciones')
 
     class Meta:
         db_table = "Summary"
