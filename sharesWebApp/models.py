@@ -14,7 +14,7 @@ class Currency(models.Model):
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
-    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio')
+    change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio')
     openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
@@ -87,14 +87,15 @@ class Share(models.Model):
     ISIN = models.CharField(max_length=20, blank=True, null=True)
     currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa', default=1)
     index = models.ForeignKey(Index, db_column='idIndex', blank=True, null=True, verbose_name='Mercado')
-    ticker = models.CharField(max_length=20, blank=True, null=True, verbose_name='Ticker')
+    tickerGoogle = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerGoo')
+    tickerYahoo = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerYah')
     favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
     description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Descripción')
     fonds = models.ManyToManyField(Fond, through='ShareFonds', through_fields=('share', 'fond'))
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
-    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio (%)')
+    change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
     openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
@@ -111,9 +112,12 @@ class Share(models.Model):
 class ShareHistory(models.Model):
     share = models.ForeignKey(Share, db_column='idShare', verbose_name='Acción')
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    open = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
-    change = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True, verbose_name='Cambio (%)')
-    openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
+    high = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Maximo')
+    low = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Minimo')
+    change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
+    volume = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='Volumen')
 
     class Meta:
         db_table = "ShareHistory"
@@ -308,7 +312,7 @@ class Transaction(models.Model):
 
     class Meta:
         db_table = "Transaction"
-        ordering = ["dateBuy"]
+        ordering = ["dateSell","dateBuy"]
         verbose_name = "Transacción"
         verbose_name_plural = "Transacciones"
 

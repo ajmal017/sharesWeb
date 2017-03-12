@@ -37,7 +37,7 @@ class FondAdmin(admin.ModelAdmin):
 
 
 class ShareAdmin(admin.ModelAdmin):
-    list_display = ('name', 'ISIN', 'index', 'ticker', 'update', 'lastValue', 'datetime', 'close', 'change', 'openValue')
+    list_display = ('name', 'ISIN', 'index', 'tickerGoogle', 'tickerYahoo', 'update', 'lastValue', 'datetime', 'close', 'change', 'openValue')
     search_fields = ('name', 'ISIN', 'ticker')
 
 
@@ -54,7 +54,7 @@ class ShareFondsAdmin(admin.ModelAdmin):
 
 
 class TransactionAdmin(ImportExportModelAdmin):
-    list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
+    list_display = ('dateBuy','dateSell','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
     search_fields = ('share', )
     raw_id_fields = ('share', )
     date_hierarchy = 'dateBuy'
@@ -93,18 +93,7 @@ class RightAdmin(admin.ModelAdmin):
 
 
 class SummaryAdmin(admin.ModelAdmin):
-    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal')
-
-
-# class TransactionResource(resources.ModelResource):
-#     list_display = ('dateBuy','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
-
-#     class Meta:
-#         model = Transaction
-
-
-# class TransactionAdminExport(ImportExportModelAdmin):
-#     resource_class = TransactionResource
+    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal','liquidationValue','numberUnits')
 
 
 # Register your models here.

@@ -2,7 +2,7 @@ import thread
 from django.shortcuts import render
 from datetime import datetime
 
-from googleFinance import getShare, getCurrency
+from finance import getShare, getCurrency
 from sharesWebApp.models import Share, Currency
 
 import globalVars

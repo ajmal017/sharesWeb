@@ -10,8 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
+from django.conf.global_settings import DATETIME_INPUT_FORMATS
 import os
 import sys
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 PROJECT_ROOT = os.path.dirname(__file__)
@@ -123,9 +125,7 @@ LANGUAGE_CODE = 'es'
 TIME_ZONE = 'Europe/Madrid'
 
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = False
 
 

@@ -1,1 +1,0 @@
-/home/nfs/sharesWeb/sharesWeb/backoffice/googleFinance.py

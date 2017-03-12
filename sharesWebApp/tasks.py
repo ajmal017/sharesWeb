@@ -6,8 +6,10 @@ from django.utils import timezone
 from celery import shared_task
 from celery import app
 from datetime import datetime
-from .models import Currency, Share, Alarm, Summary, Transaction
-from googleFinance import getShare, getCurrency
+from .models import Currency, Share, Alarm, Summary, Transaction, ShareHistory
+from finance import getShare, getCurrency
+from pandas_datareader import data
+import pandas as pd
 import globalVars
 
 
@@ -16,10 +18,10 @@ def updateShares():
     res = True
     try:
         globalVars.toLogFile('updateShares inicio')
-        shares = Share.objects.exclude(ticker__isnull=True).exclude(ticker__exact='').exclude(update=False)
+        shares = Share.objects.exclude(tickerGoogle__isnull=True).exclude(tickerGoogle__exact='').exclude(update=False)
         for share in shares:
              try:
-                 company = share.ticker
+                 company = share.tickerGoogle
                  shareResult = getShare(company)
                  share.lastValue = shareResult['Value']
                  share.datetime = datetime.strptime(shareResult['Datetime'], '%Y-%m-%dT%H:%M:%S')
@@ -29,7 +31,7 @@ def updateShares():
                  share.save()
              except Exception as e:
                  res = False
-                 globalVars.toLogFile('Error updateShares - share: ' + share.ticker + ' ' + str(e))
+                 globalVars.toLogFile('Error updateShares - share: ' + share.tickerGoogle + ' ' + str(e))
         globalVars.toLogFile('updateShares fin: ' + str(res))
         alarmCheck()
         return res
@@ -58,6 +60,7 @@ def updateCurrency():
                 res = False
                 globalVars.toLogFile('Error updateCurrency - currency: ' + currency.ticker + ' ' + str(e))
         globalVars.toLogFile('updateCurrency fin: ' + str(res))
+        calcSummary()
         return res
     except Exception as e:
         globalVars.toLogFile('Error updateCurrency: ' + str(e))
@@ -80,7 +83,7 @@ def alarmCheck():
             try:
                 share = alarm.share
                 avisar = False
-                redisAvisada = globalVars.redisAlarmaBolsaYaAvisada.replace('X', share.name)
+                redisAvisada = globalVars.redisAlarmaBolsaYaAvisada.replace('X', share.tickerGoogle)
                 if (alarm.changePriceLow is not None) and (share.change is not None) and (not globalVars.redisGet(redisAvisada)):
                     if (share.change <= alarm.changePriceLow):
                         msg = msg + msgAlarm(share.name, 'ha bajado', share.change, '%', share.lastValue)
@@ -101,7 +104,7 @@ def alarmCheck():
                     globalVars.redisSet(redisAvisada, redisAvisada, 36000)
             except Exception as e:
                 res = False
-                globalVars.toLogFile('Error alarmCheck - accion: ' + share.ticker + ' ' + str(e))
+                globalVars.toLogFile('Error alarmCheck - accion: ' + share.tickerGoogle + ' ' + str(e))
         if msg:
             #sendTelegramBot('ALERTA DE BOLSA! ' + msg)
             globalVars.toFile(globalVars.sendFile, 'ALERTA DE BOLSA! ' + msg)
@@ -162,3 +165,45 @@ def calcSummary():
     except Exception as e:
         globalVars.toLogFile('Error calcSummary: ' + str(e))
         return False
+
+
+def setShareHistory(tickYahoo, startDate, endDate):
+    try:
+        s = Share.objects.get(tickerYahoo=tickYahoo)        
+        p = data.DataReader(tickYahoo, 'yahoo', startDate, endDate)
+        daterange = pd.date_range(startDate, endDate)
+        for single_date in daterange:
+            try:
+                sh = p.ix[single_date]
+                try:
+                    hist = ShareHistory.objects.get(share=s, date=single_date)
+                except ShareHistory.DoesNotExist:
+                    hist = ShareHistory()
+                hist.share = s
+                hist.date = single_date
+                hist.open = sh[0]
+                hist.high = sh[1]
+                hist.low = sh[2]
+                hist.close = sh[3]
+                hist.volume = sh[4]
+                # hist.close = 
+                hist.save()
+            except Exception as e:
+                pass
+        return True
+    except Exception as e:
+        globalVars.toLogFile('Error getShareHistory: ' + str(e))
+        return False
+
+
+def setAllShareHistory():
+    try:
+        trs = Transaction.objects.all()
+        for tr in trs:
+            ticker = tr.share.tickerYahoo
+            setShareHistory(ticker, '2015/01/01', '2017/03/09') 
+        return True        
+    except Exception as e:
+        globalVars.toLogFile('Error getShareHistory: ' + str(e))
+        return False
+
