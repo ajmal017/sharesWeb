@@ -28,6 +28,23 @@ class Currency(models.Model):
         return self.name
 
 
+class CurrencyHistory(models.Model):
+    currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa')
+    date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
+    change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
+
+    class Meta:
+        db_table = "CurrencyHistory"
+        ordering = ["-date","currency"]
+        verbose_name = "Histórico Divisas"
+        verbose_name_plural = "Histórico Divisas"
+
+    def __unicode__(self):
+        return self.currency.name  + ' - '  + '{:%d/%m/%Y}'.format(self.date)
+
+
+
 class Broker(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombre')
 
@@ -90,7 +107,7 @@ class Share(models.Model):
     tickerGoogle = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerGoo')
     tickerYahoo = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerYah')
     favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
-    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Descripción')
+    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
     fonds = models.ManyToManyField(Fond, through='ShareFonds', through_fields=('share', 'fond'))
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
@@ -114,13 +131,14 @@ class ShareHistory(models.Model):
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
     open = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
-    high = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Maximo')
-    low = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Minimo')
+    high = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Máximo')
+    low = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Mínimo')
     change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
     volume = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name='Volumen')
 
     class Meta:
         db_table = "ShareHistory"
+        ordering = ["-date","share"]
         verbose_name = "Histórico Acciones"
         verbose_name_plural = "Histórico Acciones"
 
@@ -354,6 +372,40 @@ class Right(models.Model):
 
     def __unicode__(self):
         return self.transaction.share.name + ' - ' + '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.transaction.broker.name
+
+
+class DepositWithdraw(models.Model):
+    date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1)
+    amount = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
+    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
+
+
+    class Meta:
+        db_table = "DepositWithdraw"
+        ordering = ["date"]
+        verbose_name = "Depositos/Reembolsos"
+        verbose_name_plural = "Depositos/Reembolsos"
+
+    def __unicode__(self):
+        return '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.broker.name
+
+
+class BrokerComissions(models.Model):
+    date = models.DateField(blank=False, null=False, verbose_name='Fecha')
+    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1)
+    amount = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
+    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
+
+
+    class Meta:
+        db_table = "BrokerComissions"
+        ordering = ["date"]
+        verbose_name = "Comisiones globales"
+        verbose_name_plural = "Comisiones globales"
+
+    def __unicode__(self):
+        return '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.broker.name
 
 
 class Alarm(models.Model):

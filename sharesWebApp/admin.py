@@ -4,8 +4,10 @@
 #from django.core.urlresolvers import reverse
 from django.utils.html import format_html
 from django.contrib import admin
-from models import Currency, Broker, Index, Period, Fond, Share, Alarm, ShareFonds
-from models import Transaction, Dividend, Right, Summary
+from models import Currency, Broker, Index, Period, Fond, Share, ShareHistory
+from models import Alarm, ShareFonds, Transaction, Dividend, Right
+from models import DepositWithdraw, BrokerComissions, Summary, ShareHistory
+from models import CurrencyHistory
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
@@ -13,6 +15,13 @@ from import_export.admin import ImportExportModelAdmin
 class CurrencyAdmin(admin.ModelAdmin):
     list_display = ('name', 'symbol', 'ticker', 'lastValue', 'datetime', 'close', 'change', 'openValue')
     search_fields = ('name', )
+
+
+class CurrencyHistoryAdmin(admin.ModelAdmin):
+    list_display = ('currency', 'date', 'close', 'change')
+    search_fields = ('name', )
+    raw_id_fields = ('currency', )
+    date_hierarchy = 'date'
 
 
 class BrokerAdmin(admin.ModelAdmin):
@@ -39,6 +48,13 @@ class FondAdmin(admin.ModelAdmin):
 class ShareAdmin(admin.ModelAdmin):
     list_display = ('name', 'ISIN', 'index', 'tickerGoogle', 'tickerYahoo', 'update', 'lastValue', 'datetime', 'close', 'change', 'openValue')
     search_fields = ('name', 'ISIN', 'ticker')
+
+
+class ShareHistoryAdmin(admin.ModelAdmin):
+    list_display = ('share','date','open','close','high','low','change','volume')
+    search_fields = ('share', 'date')
+    raw_id_fields = ('share', )
+    date_hierarchy = 'date'
 
 
 class AlarmAdmin(admin.ModelAdmin):
@@ -80,15 +96,27 @@ class TransactionAdmin(ImportExportModelAdmin):
 
 class DividendAdmin(admin.ModelAdmin):
     list_display = ('date', 'transaction', 'importGross', 'importNet')
-    search_fields = ('transaction', 'date')
+    search_fields = ('transaction','date')
     raw_id_fields = ('transaction', )
     date_hierarchy = 'date'
 
 
 class RightAdmin(admin.ModelAdmin):
     list_display = ('date', 'transaction', 'importGross')
-    search_fields = ('transaction', 'date')
+    search_fields = ('transaction','date')
     raw_id_fields = ('transaction', )
+    date_hierarchy = 'date'
+
+
+class DepositWithdrawAdmin(admin.ModelAdmin):
+    list_display = ('date', 'broker','amount','description')
+    search_fields = ('broker','date')
+    date_hierarchy = 'date'
+
+
+class BrokerComissionsAdmin(admin.ModelAdmin):
+    list_display = ('date', 'broker','amount','description')
+    search_fields = ('broker','date')
     date_hierarchy = 'date'
 
 
@@ -98,15 +126,19 @@ class SummaryAdmin(admin.ModelAdmin):
 
 # Register your models here.
 admin.site.register(Currency, CurrencyAdmin)
+admin.site.register(CurrencyHistory, CurrencyHistoryAdmin)
 admin.site.register(Broker, BrokerAdmin)
 admin.site.register(Index, IndexAdmin)
 admin.site.register(Period, PeriodAdmin)
 admin.site.register(Fond, FondAdmin)
 admin.site.register(Share, ShareAdmin)
+admin.site.register(ShareHistory, ShareHistoryAdmin)
 admin.site.register(Alarm, AlarmAdmin)
 admin.site.register(ShareFonds, ShareFondsAdmin)
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(Dividend, DividendAdmin)
 admin.site.register(Right, RightAdmin)
+admin.site.register(DepositWithdraw, DepositWithdrawAdmin)
+admin.site.register(BrokerComissions, BrokerComissionsAdmin)
 admin.site.register(Summary, SummaryAdmin)
 #admin.site.register(Transaction, TransactionAdminExport)

@@ -5,10 +5,12 @@ from __future__ import absolute_import, unicode_literals
 from django.utils import timezone
 from celery import shared_task
 from celery import app
-from datetime import datetime
-from .models import Currency, Share, Alarm, Summary, Transaction, ShareHistory
+from datetime import datetime, timedelta, date
+from .models import Currency, Share, Alarm, Summary, Transaction, ShareHistory, DepositWithdraw, CurrencyHistory
+from django.db.models import Q
 from finance import getShare, getCurrency
 from pandas_datareader import data
+from pandas_datareader.oanda import get_oanda_currency_historical_rates
 import pandas as pd
 import globalVars
 
@@ -169,7 +171,7 @@ def calcSummary():
 
 def setShareHistory(tickYahoo, startDate, endDate):
     try:
-        s = Share.objects.get(tickerYahoo=tickYahoo)        
+        s = Share.objects.get(tickerYahoo=tickYahoo)
         p = data.DataReader(tickYahoo, 'yahoo', startDate, endDate)
         daterange = pd.date_range(startDate, endDate)
         for single_date in daterange:
@@ -186,7 +188,7 @@ def setShareHistory(tickYahoo, startDate, endDate):
                 hist.low = sh[2]
                 hist.close = sh[3]
                 hist.volume = sh[4]
-                # hist.close = 
+                # hist.close =
                 hist.save()
             except Exception as e:
                 pass
@@ -201,9 +203,97 @@ def setAllShareHistory():
         trs = Transaction.objects.all()
         for tr in trs:
             ticker = tr.share.tickerYahoo
-            setShareHistory(ticker, '2015/01/01', '2017/03/09') 
-        return True        
+            setShareHistory(ticker, '2015/01/01', '2017/03/09')
+        return True
     except Exception as e:
         globalVars.toLogFile('Error getShareHistory: ' + str(e))
         return False
 
+
+def setCurrencyHistory(sym, startDate, endDate, base="EUR"):
+    try:
+        c = Currency.objects.get(symbol=sym)
+
+        p = get_oanda_currency_historical_rates(
+            startDate, endDate,
+            quote_currency=sym,
+            base_currency=base
+        )
+
+        daterange = pd.date_range(startDate, endDate)
+        for single_date in daterange:
+            try:
+                value = p.ix[single_date]
+                try:
+                    hist = CurrencyHistory.objects.get(currency=c, date=single_date)
+                except CurrencyHistory.DoesNotExist:
+                    hist = CurrencyHistory()
+                hist.currency = c
+                hist.date = single_date
+                hist.close = value
+                hist.save()
+            except Exception as e:
+                globalVars.toLogFile('Error setCurrencyHistory: ' + str(e))
+                # pass
+        return True
+    except Exception as e:
+        globalVars.toLogFile('Error setCurrencyHistory: ' + str(e))
+        return False
+
+
+# def setSummaryHistory(dateCalc):
+#     try:
+#         globalVars.toLogFile('setSummaryHistory inicio')
+#         res = True
+
+#         try:
+#             summIni = Summary.objects.filter(date__lt=dateCalc).order_by('-date')[:1]
+#             summIni = summIni[0]
+#         except Exception as e:
+#             summIni = Summary()
+#             depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
+#             summIni.date = depositIni.date
+#             summIni.numberUnits = depositIni.amount / 100
+#             summIni.liquidationValue = depositIni.amount / summIni.numberUnits
+#             summIni.save()
+
+#         try:
+#             summ = Summary.objects.get(date=dateCalc)
+#         except Summary.DoesNotExist:
+#             summ = Summary(date=dateCalc)
+
+#         dateIni = summIni.date
+#         numberUnitsIni = summIni.numberUnits
+#         liquidationValueIni = summIni.liquidationValue
+
+
+#         transacs = Transaction.objects.filter(Q(dateSell__isnull=True) | Q(dateSell__gte=dateCalc), dateBuy__lte=dateCalc).order_by('dateBuy', 'dateBuy')
+#         for transac in transacs:
+#             transac.share.currency.lastValue =
+
+#             transac.share.lastValue =
+
+
+#         deposits = DepositWithdraw.objects.filter(date=dateCalc)
+#         for deposit in deposits:
+
+
+
+
+
+#         summ.priceBuyTotal = totalBuy
+#         summ.priceSellTotal = totalSell
+#         summ.dividendGrossTotal = totalDividend
+#         summ.rightsTotal = totalRights
+#         summ.profitTotal = totalProfit
+#         summ.priceBuyCurrent = currentBuy
+#         summ.priceSellCurrent = currentSell
+#         summ.dividendGrossCurrent = currentDividend
+#         summ.rightsCurrent = currentRights
+#         summ.profitCurrent = currentProfit
+#         summ.save()
+#         globalVars.toLogFile('setSummaryHistory fin: ' + str(res))
+#         return res
+#     except Exception as e:
+#         globalVars.toLogFile('Error setSummaryHistory: ' + str(e))
+#         return False
