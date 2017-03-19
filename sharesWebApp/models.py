@@ -10,8 +10,11 @@ import globalVars
 
 def calcProfitability(priceBuy, priceSell, dividendGross, rights, investDays):
     try:
-        pf = priceSell + dividendGross + rights
-        po = priceBuy
+        pf = float(priceSell) + float(dividendGross) + float(rights)
+        po = float(priceBuy)
+        if pf ==0 or po ==0:
+            return 0
+
         pf_div_po = pf / po
         t = 1.0 / (float(investDays) / 365.0)
         if investDays < 365:
@@ -154,7 +157,7 @@ class Share(models.Model):
     class Meta:
         db_table = "Share"
         ordering = ["name"]
-        verbose_name = "Accion"
+        verbose_name = "Acción"
         verbose_name_plural = "Acciones"
 
     def __unicode__(self):
@@ -215,7 +218,7 @@ class Transaction(models.Model):
     def priceBuyTotal(self):
         try:
             if self.pk is not None:
-                return round((self.priceBuyUnity * self.sharesBuy * (1 / self.currencyValueBuy)) + self.comissionBuy, 2)
+                return round((self.priceBuyUnity * self.sharesBuy * (1 / self.currencyValueBuy)) + self.comissionBuy, 4)
             else:
                 return 0
         except Exception as e:
@@ -236,13 +239,13 @@ class Transaction(models.Model):
                 else:
                     comission = self.comissionBuy
                 if self.priceSellUnity > 0:
-                    return round((self.priceSellUnity * numShares * (1 / self.currencyValueSell)) - comission, 2)
+                    return round((self.priceSellUnity * numShares * (1 / self.currencyValueSell)) - comission, 4)
                 else:
                     if (self.currencyValueBuy != 1):
                         currency = self.share.currency.lastValue
                     else:
                         currency = 1
-                    return round((self.share.lastValue * numShares * (1 / currency)) - comission, 2)
+                    return round((self.share.lastValue * numShares * (1 / currency)) - comission, 4)
             else:
                 return 0
         except Exception as e:
@@ -265,7 +268,7 @@ class Transaction(models.Model):
                         d = div.importNet
                     d = d * (1 / div.currencyValue)
                     total = total + d
-            return total
+            return round(total, 4)
         except Exception as e:
             globalVars.toLogFile('Error getDividend: ' + str(e))
             return 0
@@ -282,7 +285,7 @@ class Transaction(models.Model):
                     r = right.importGross
                     r = r * (1 / right.currencyValue)
                     total = total + r
-            return total
+            return round(total, 4)
         except Exception as e:
             globalVars.toLogFile('Error getRigths: ' + str(e))
             return 0
@@ -290,7 +293,7 @@ class Transaction(models.Model):
     def getProfit(self, dateTo=None):
         try:
             if self.pk is not None:
-                return self.priceSellTotal + self.getDividend(True, dateTo) + self.getRights(dateTo) - self.priceBuyTotal
+                return float(self.priceSellTotal) + float(self.getDividend(True, dateTo)) + float(self.getRights(dateTo)) - float(self.priceBuyTotal)
             else:
                 return 0
         except Exception as e:

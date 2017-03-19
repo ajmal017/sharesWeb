@@ -284,7 +284,8 @@ def setSummaryHistory(dateCalc):
         currentDividend = 0
         currentRights = 0
         currentProfit = 0
-        transacs = Transaction.objects.filter(Q(dateSell__isnull=True) | Q(dateSell__gte=dateCalc), dateBuy__lte=dateCalc).order_by('dateBuy', 'dateBuy')
+        #transacs = Transaction.objects.filter(Q(dateSell__isnull=True) | Q(dateSell__gte=dateCalc), dateBuy__lte=dateCalc).order_by('dateBuy', 'dateSell')
+        transacs = Transaction.objects.filter(dateBuy__lte=dateCalc).order_by('dateBuy', 'dateSell')
         for transac in transacs:
             if (not transac.dateSell) or (transac.dateSell > dateCalc):
                 transac.priceSellUnity = 0
@@ -338,3 +339,14 @@ def setSummaryHistory(dateCalc):
         globalVars.toLogFile('Error setSummaryHistory: ' + str(e))
         return False
 
+
+
+def setAllSummaryHistory(startDate, endDate):
+    try:
+        daterange = pd.date_range(startDate, endDate)
+        for single_date in daterange:
+            setSummaryHistory(single_date)
+        return True
+    except Exception as e:
+        globalVars.toLogFile('Error setAllSummaryHistory: ' + str(e))
+        return False
