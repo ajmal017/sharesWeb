@@ -22,5 +22,7 @@ from sharesWeb.views import inicio
 urlpatterns = [
     url(r'^grappelli/', include('grappelli.urls')), # grappelli URLS
     url(r'^admin/', admin.site.urls),
-    url(r'^$', inicio),
+    #url(r'^$', inicio),
+    url(r'^$', admin.site.urls),
 ]
+

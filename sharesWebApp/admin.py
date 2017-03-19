@@ -121,7 +121,7 @@ class BrokerComissionsAdmin(admin.ModelAdmin):
 
 
 class SummaryAdmin(admin.ModelAdmin):
-    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal','liquidationValue','numberUnits')
+    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','profitabilityCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal','profitabilityTotal','liquidationValue','numberUnits')
 
 
 # Register your models here.
@@ -141,4 +141,4 @@ admin.site.register(Right, RightAdmin)
 admin.site.register(DepositWithdraw, DepositWithdrawAdmin)
 admin.site.register(BrokerComissions, BrokerComissionsAdmin)
 admin.site.register(Summary, SummaryAdmin)
-#admin.site.register(Transaction, TransactionAdminExport)
+

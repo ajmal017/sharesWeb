@@ -12,6 +12,7 @@ from finance import getShare, getCurrency
 from pandas_datareader import data
 from pandas_datareader.oanda import get_oanda_currency_historical_rates
 import pandas as pd
+from decimal import Decimal
 import globalVars
 
 
@@ -198,12 +199,12 @@ def setShareHistory(tickYahoo, startDate, endDate):
         return False
 
 
-def setAllShareHistory():
+def setAllShareHistory(startDate, endDate):
     try:
         trs = Transaction.objects.all()
         for tr in trs:
             ticker = tr.share.tickerYahoo
-            setShareHistory(ticker, '2015/01/01', '2017/03/09')
+            setShareHistory(ticker, startDate, endDate)
         return True
     except Exception as e:
         globalVars.toLogFile('Error getShareHistory: ' + str(e))
@@ -241,59 +242,99 @@ def setCurrencyHistory(sym, startDate, endDate, base="EUR"):
         return False
 
 
-# def setSummaryHistory(dateCalc):
-#     try:
-#         globalVars.toLogFile('setSummaryHistory inicio')
-#         res = True
+def setSummaryHistory(dateCalc):
+    try:
+        if dateCalc.weekday() >4: # Weekend: we don't calculate summary
+            globalVars.toLogFile('setSummaryHistory: el día seleccionado es festivo')
+            return True
+        globalVars.toLogFile('setSummaryHistory inicio')
+        res = True
 
-#         try:
-#             summIni = Summary.objects.filter(date__lt=dateCalc).order_by('-date')[:1]
-#             summIni = summIni[0]
-#         except Exception as e:
-#             summIni = Summary()
-#             depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
-#             summIni.date = depositIni.date
-#             summIni.numberUnits = depositIni.amount / 100
-#             summIni.liquidationValue = depositIni.amount / summIni.numberUnits
-#             summIni.save()
+        try:
+            summIni = Summary.objects.filter(date__lt=dateCalc).order_by('-date')[:1]
+            summIni = summIni[0]
+        except Exception as e:
+            summIni = Summary()
+            depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
+            summIni.date = depositIni.date
+            # summIni.numberUnits = depositIni.amount / 100
+            summIni.numberUnits = 1
+            #summIni.liquidationValue = depositIni.amount / summIni.numberUnits
+            summIni.liquidationValue = depositIni.amount
+            summIni.save()
 
-#         try:
-#             summ = Summary.objects.get(date=dateCalc)
-#         except Summary.DoesNotExist:
-#             summ = Summary(date=dateCalc)
+        try:
+            summ = Summary.objects.get(date=dateCalc)
+        except Summary.DoesNotExist:
+            summ = Summary(date=dateCalc)
 
-#         dateIni = summIni.date
-#         numberUnitsIni = summIni.numberUnits
-#         liquidationValueIni = summIni.liquidationValue
+        dateIni = summIni.date
+        numberUnitsIni = float(summIni.numberUnits)
+        liquidationValueIni = float(summIni.liquidationValue)
+
+        numberUnits = numberUnitsIni
+
+        totalBuy = 0
+        totalSell = 0
+        totalDividend = 0
+        totalRights = 0
+        totalProfit = 0
+        currentBuy = 0
+        currentSell = 0
+        currentDividend = 0
+        currentRights = 0
+        currentProfit = 0
+        transacs = Transaction.objects.filter(Q(dateSell__isnull=True) | Q(dateSell__gte=dateCalc), dateBuy__lte=dateCalc).order_by('dateBuy', 'dateBuy')
+        for transac in transacs:
+            if (not transac.dateSell) or (transac.dateSell > dateCalc):
+                transac.priceSellUnity = 0
+                transac.sharesSell = 0
+                transac.comissionSell = 0
+                transac.share.currency.lastValue = transac.share.currency.getValueAtDate(dateCalc)
+                transac.share.lastValue = transac.share.getValueAtDate(dateCalc)
+
+            iterPriceBuy = transac.priceBuyTotal
+            iterPriceSell = transac.priceSellTotal
+            iterDividend = transac.getDividend(True, dateCalc)
+            iterRights = transac.getRights(dateCalc)
+            iterProfit = transac.getProfit(dateCalc)
+            if (not transac.dateSell) or (transac.dateSell > dateCalc):
+                currentBuy = currentBuy + iterPriceBuy
+                currentSell = currentSell + iterPriceSell
+                currentDividend = currentDividend + iterDividend
+                currentRights = currentRights + iterRights
+                currentProfit = currentProfit + iterProfit
+                #globalVars.toLogFile('Accion: ' + transac.share.name + '. Beneficio: ' +str(round(transac.profit,2)))
+            totalBuy = totalBuy + iterPriceBuy
+            totalSell = totalSell + iterPriceSell
+            totalDividend = totalDividend + iterDividend
+            totalRights = totalRights + iterRights
+            totalProfit = totalProfit + iterProfit
 
 
-#         transacs = Transaction.objects.filter(Q(dateSell__isnull=True) | Q(dateSell__gte=dateCalc), dateBuy__lte=dateCalc).order_by('dateBuy', 'dateBuy')
-#         for transac in transacs:
-#             transac.share.currency.lastValue =
+        #liquidationValue = currentSell + currentDividend + currentRights
+        liquidationValue = 1
+        deposits = DepositWithdraw.objects.filter(date=dateCalc)
+        for deposit in deposits:
+            # numberUnits = numberUnits + (float(deposit.amount) / liquidationValue)
+            numberUnits = 1
 
-#             transac.share.lastValue =
+        summ.priceBuyTotal = totalBuy
+        summ.priceSellTotal = totalSell
+        summ.dividendGrossTotal = totalDividend
+        summ.rightsTotal = totalRights
+        summ.profitTotal = totalProfit
+        summ.priceBuyCurrent = currentBuy
+        summ.priceSellCurrent = currentSell
+        summ.dividendGrossCurrent = currentDividend
+        summ.rightsCurrent = currentRights
+        summ.profitCurrent = currentProfit
+        summ.liquidationValue = liquidationValue
+        summ.numberUnits = numberUnits
+        summ.save()
+        globalVars.toLogFile('setSummaryHistory fin: ' + str(res))
+        return res
+    except Exception as e:
+        globalVars.toLogFile('Error setSummaryHistory: ' + str(e))
+        return False
 
-
-#         deposits = DepositWithdraw.objects.filter(date=dateCalc)
-#         for deposit in deposits:
-
-
-
-
-
-#         summ.priceBuyTotal = totalBuy
-#         summ.priceSellTotal = totalSell
-#         summ.dividendGrossTotal = totalDividend
-#         summ.rightsTotal = totalRights
-#         summ.profitTotal = totalProfit
-#         summ.priceBuyCurrent = currentBuy
-#         summ.priceSellCurrent = currentSell
-#         summ.dividendGrossCurrent = currentDividend
-#         summ.rightsCurrent = currentRights
-#         summ.profitCurrent = currentProfit
-#         summ.save()
-#         globalVars.toLogFile('setSummaryHistory fin: ' + str(res))
-#         return res
-#     except Exception as e:
-#         globalVars.toLogFile('Error setSummaryHistory: ' + str(e))
-#         return False

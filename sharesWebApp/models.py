@@ -4,7 +4,23 @@
 from __future__ import unicode_literals
 from django.db import models
 from django.utils import timezone
+from datetime import date
 import globalVars
+
+
+def calcProfitability(priceBuy, priceSell, dividendGross, rights, investDays):
+    try:
+        pf = priceSell + dividendGross + rights
+        po = priceBuy
+        pf_div_po = pf / po
+        t = 1.0 / (float(investDays) / 365.0)
+        if investDays < 365:
+            return round((pf_div_po - 1) * 100.0, 2)
+        else:
+            return round((pow(pf_div_po, t) - 1.0) * 100.0, 2)
+    except Exception as e:
+        globalVars.toLogFile('Error calcProfitability: ' + str(e))
+        return 0
 
 
 class Currency(models.Model):
@@ -17,6 +33,17 @@ class Currency(models.Model):
     change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio')
     openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
+
+    def getValueAtDate(self, dateCalc):
+        if self.update:
+            try:
+                cur = CurrencyHistory.objects.get(currency=self, date=dateCalc)
+                return cur.close
+            except Exception as e:
+                globalVars.toLogFile('Error getValueAtDate recuperando histórico divisa: ' + str(e))
+                return self.lastValue
+        else:
+            return 1
 
     class Meta:
         db_table = "Currency"
@@ -116,6 +143,14 @@ class Share(models.Model):
     openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
+    def getValueAtDate(self, dateCalc):
+        try:
+            sh = ShareHistory.objects.get(share=self, date=dateCalc)
+            return sh.close
+        except Exception as e:
+            globalVars.toLogFile('Error getValueAtDate recuperando histórico acción: ' + str(e))
+            return self.lastValue
+
     class Meta:
         db_table = "Share"
         ordering = ["name"]
@@ -143,7 +178,7 @@ class ShareHistory(models.Model):
         verbose_name_plural = "Histórico Acciones"
 
     def __unicode__(self):
-        return self.share.name  + ' - '  + '{:%d/%m/%Y}'.format(self.date) 
+        return self.share.name  + ' - '  + '{:%d/%m/%Y}'.format(self.date)
 
 
 class ShareFonds(models.Model):
@@ -192,18 +227,22 @@ class Transaction(models.Model):
     def priceSellTotal(self):
         try:
             if self.pk is not None:
+                if self.sharesSell > 0:
+                    numShares = self.sharesSell
+                else:
+                    numShares = self.sharesBuy
+                if self.comissionSell > 0:
+                    comission = self.comissionSell
+                else:
+                    comission = self.comissionBuy
                 if self.priceSellUnity > 0:
-                    return round((self.priceSellUnity * self.sharesSell * (1 / self.currencyValueBuy)) - self.comissionSell, 2)
+                    return round((self.priceSellUnity * numShares * (1 / self.currencyValueSell)) - comission, 2)
                 else:
                     if (self.currencyValueBuy != 1):
                         currency = self.share.currency.lastValue
                     else:
                         currency = 1
-                    if self.sharesSell > 0:
-                        numShares = self.sharesSell
-                    else:
-                        numShares = self.sharesBuy
-                    return round((self.share.lastValue * numShares * (1 / currency)) - self.comissionBuy, 2)
+                    return round((self.share.lastValue * numShares * (1 / currency)) - comission, 2)
             else:
                 return 0
         except Exception as e:
@@ -211,11 +250,14 @@ class Transaction(models.Model):
             return 0
     priceSellTotal.fget.short_description = u'Precio Venta'
 
-    def getDividend(self, gross=True):
+    def getDividend(self, gross=True, dateTo=None):
         total = 0
         try:
             if self.pk is not None:
-                divs = Dividend.objects.filter(transaction=self.pk)
+                if dateTo:
+                    divs = Dividend.objects.filter(transaction=self.pk, date__lte=dateTo)
+                else:
+                    divs = Dividend.objects.filter(transaction=self.pk)
                 for div in divs:
                     if gross:
                         d = div.importGross
@@ -223,50 +265,56 @@ class Transaction(models.Model):
                         d = div.importNet
                     d = d * (1 / div.currencyValue)
                     total = total + d
-            return round(total, 2)
+            return total
         except Exception as e:
             globalVars.toLogFile('Error getDividend: ' + str(e))
             return 0
 
-    def getRigths(self):
+    def getRights(self, dateTo=None):
         total = 0
         try:
             if self.pk is not None:
-                rights = Right.objects.filter(transaction=self.pk)
+                if dateTo:
+                    rights = Right.objects.filter(transaction=self.pk, date__lte=dateTo)
+                else:
+                    rights = Right.objects.filter(transaction=self.pk)
                 for right in rights:
                     r = right.importGross
                     r = r * (1 / right.currencyValue)
                     total = total + r
-            return round(total, 2)
+            return total
         except Exception as e:
             globalVars.toLogFile('Error getRigths: ' + str(e))
             return 0
 
-    @property
-    def dividendGross(self):
-        return round(self.getDividend(True), 2)
-    dividendGross.fget.short_description = u'Dividendos Bruto'
-
-    @property
-    def dividendNet(self):
-        return round(self.getDividend(False), 2)
-    dividendNet.fget.short_description = u'Dividendos Neto'
-
-    @property
-    def rights(self):
-        return round(self.getRigths(), 2)
-    rights.fget.short_description = u'Derechos'
-
-    @property
-    def profit(self):
+    def getProfit(self, dateTo=None):
         try:
             if self.pk is not None:
-                return round(self.priceSellTotal + self.dividendGross + self.rights - self.priceBuyTotal, 2)
+                return self.priceSellTotal + self.getDividend(True, dateTo) + self.getRights(dateTo) - self.priceBuyTotal
             else:
                 return 0
         except Exception as e:
-            globalVars.toLogFile('Error profit: ' + str(e))
+            globalVars.toLogFile('Error getProfit: ' + str(e))
             return 0
+
+    @property
+    def dividendGross(self, dateTo=None):
+        return round(self.getDividend(True, dateTo), 2)
+    dividendGross.fget.short_description = u'Dividendos Bruto'
+
+    @property
+    def dividendNet(self, dateTo=None):
+        return round(self.getDividend(False, dateTo), 2)
+    dividendNet.fget.short_description = u'Dividendos Neto'
+
+    @property
+    def rights(self, dateTo=None):
+        return round(self.getRights(dateTo), 2)
+    rights.fget.short_description = u'Derechos'
+
+    @property
+    def profit(self, dateTo=None):
+        return round(self.getProfit(dateTo), 2)
     profit.fget.short_description = u'Beneficio Bruto'
 
     @property
@@ -313,14 +361,7 @@ class Transaction(models.Model):
     def profitability(self):
         try:
             if self.pk is not None:
-                pf = self.priceSellTotal + self.dividendGross + self.rights
-                po = self.priceBuyTotal
-                pf_div_po = pf / po
-                t = 1.0 / (float(self.investDays) / 365.0)
-                if self.investDays < 365:
-                    return round((pf_div_po - 1) * 100.0, 2)
-                else:
-                    return round((pow(pf_div_po, t) - 1.0) * 100.0, 2)
+                return calcProfitability(self.priceBuyTotal, self.priceSellTotal, self.getDividend(True), self.getRights(), self.investDays)
             else:
                 return 0
         except Exception as e:
@@ -355,8 +396,8 @@ class Dividend(models.Model):
         return self.transaction.share.name + ' - ' + '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.transaction.broker.name
 
 
-# Esta clase permite registrar la venta residual de derechos que hacen los brokers cuando nos sobran algunos 
-# derechos. La compra de derechos, la gestionamos como compra normal y corriente de acciones normalizando 
+# Esta clase permite registrar la venta residual de derechos que hacen los brokers cuando nos sobran algunos
+# derechos. La compra de derechos, la gestionamos como compra normal y corriente de acciones normalizando
 # los precios
 class Right(models.Model):
     transaction = models.ForeignKey(Transaction, db_column='idTransaction', verbose_name='Transacción')
@@ -440,6 +481,43 @@ class Summary(models.Model):
     profitTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Beneficio')
     liquidationValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor liquidativo')
     numberUnits = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Participaciones')
+
+    @property
+    def investDays(self):
+        try:
+            if self.pk is not None:
+                return (self.date - date(2015,8,19)).days
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error investDays: ' + str(e))
+            return 0
+    investDays.fget.short_description = u'Días invertidos'
+
+    @property
+    def profitabilityCurrent(self):
+        try:
+            if self.pk is not None:
+                return calcProfitability(self.priceBuyCurrent, self.priceSellCurrent, self.dividendGrossCurrent, self.rightsCurrent, self.investDays)
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error profitabilityCurrent: ' + str(e))
+            return 0
+    profitabilityCurrent.fget.short_description = u'Rentab. actual(%)'
+
+    @property
+    def profitabilityTotal(self):
+        try:
+            if self.pk is not None:
+                return calcProfitability(self.priceBuyTotal, self.priceSellTotal, self.dividendGrossTotal, self.rightsTotal, self.investDays)
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error profitabilityTotal: ' + str(e))
+            return 0
+    profitabilityTotal.fget.short_description = u'Rentab. total(%)'
+
 
     class Meta:
         db_table = "Summary"
