@@ -424,6 +424,20 @@ class DepositWithdraw(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
     description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
 
+    @staticmethod
+    def calcDeposit(dateTo=None):
+        total = 0
+        try:
+            if dateTo:
+                deps = DepositWithdraw.objects.filter(date__lte=dateTo)
+            else:
+                deps = DepositWithdraw.objects.all()
+            for dep in deps:
+                total = total + dep.amount
+            return round(total, 4)
+        except Exception as e:
+            globalVars.toLogFile('Error getDeposit: ' + str(e))
+            return 0
 
     class Meta:
         db_table = "DepositWithdraw"
@@ -489,7 +503,7 @@ class Summary(models.Model):
     def investDays(self):
         try:
             if self.pk is not None:
-                return (self.date - date(2015,8,19)).days
+                return (self.date - date(2015,8,20)).days
             else:
                 return 0
         except Exception as e:
