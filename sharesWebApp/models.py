@@ -538,7 +538,7 @@ class Summary(models.Model):
 
     class Meta:
         db_table = "Summary"
-        ordering = ["date"]
+        ordering = ["-date"]
         verbose_name = "Resumen"
         verbose_name_plural = "Resumen"
 
