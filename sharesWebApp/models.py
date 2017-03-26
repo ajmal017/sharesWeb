@@ -4,7 +4,7 @@
 from __future__ import unicode_literals
 from django.db import models
 from django.utils import timezone
-from datetime import date
+from datetime import date, timedelta
 import globalVars
 
 
@@ -496,8 +496,8 @@ class Summary(models.Model):
     dividendGrossTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Dividendos')
     rightsTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     profitTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Beneficio')
-    liquidationValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor liquidativo')
-    numberUnits = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Participaciones')
+    B = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Balance')
+    R = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Rentab. Hoy')
 
     @property
     def investDays(self):
@@ -512,28 +512,26 @@ class Summary(models.Model):
     investDays.fget.short_description = u'Días invertidos'
 
     @property
-    def profitabilityCurrent(self):
+    def profitability(self):
         try:
             if self.pk is not None:
-                return calcProfitability(self.priceBuyCurrent, self.priceSellCurrent, self.dividendGrossCurrent, self.rightsCurrent, self.investDays)
+                yearCalc = self.date.year
+                dateStart = date(yearCalc,1,1)
+                #delta = timedelta(days=1)
+                # dateEnd = self.date - delta
+                dateEnd = self.date
+                summs = Summary.objects.filter(date__gte=dateStart, date__lte=dateEnd).order_by('date')
+                R = 1
+                for summ in summs:
+                    R = (1 + float(summ.R)) * R
+                R = R - 1
+                return round(float(R) * 100.0, 4)
             else:
                 return 0
         except Exception as e:
-            globalVars.toLogFile('Error profitabilityCurrent: ' + str(e))
+            globalVars.toLogFile('Error Summary.profitability: ' + str(e))
             return 0
-    profitabilityCurrent.fget.short_description = u'Rentab. actual(%)'
-
-    @property
-    def profitabilityTotal(self):
-        try:
-            if self.pk is not None:
-                return calcProfitability(self.priceBuyTotal, self.priceSellTotal, self.dividendGrossTotal, self.rightsTotal, self.investDays)
-            else:
-                return 0
-        except Exception as e:
-            globalVars.toLogFile('Error profitabilityTotal: ' + str(e))
-            return 0
-    profitabilityTotal.fget.short_description = u'Rentab. total(%)'
+    profitability.fget.short_description = u'Rentab. geom(%)'
 
 
     class Meta:

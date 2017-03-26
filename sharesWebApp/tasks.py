@@ -255,20 +255,21 @@ def setSummaryHistory(dateCalc):
             summIni = summIni[0]
         except Exception as e:
             summIni = Summary()
-            depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
-            summIni.date = depositIni.date
+            # depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
+            # summIni.date = depositIni.date
+            summIni.date = date(2015,8,19)
             summIni.priceBuyCurrent = 0
             summIni.priceBuyTotal = 0
-            summIni.numberUnits = float(depositIni.amount) / 100.0
-            summIni.liquidationValue = float(depositIni.amount) / float(summIni.numberUnits)
+            #summIni.B = depositIni.amount
+            summIni.B = 249.1
+            summIni.R = 0
             summIni.save()
             return res
 
         dateIni = summIni.date
         priceCurrentBuyIni = float(summIni.priceBuyCurrent)
-        numberUnitsIni = float(summIni.numberUnits)
-        liquidationValueIni = float(summIni.liquidationValue)
-        numberUnits = numberUnitsIni
+        BIni = float(summIni.B)
+        RIni = float(summIni.R)
 
         totalBuy = 0
         totalSell = 0
@@ -307,26 +308,35 @@ def setSummaryHistory(dateCalc):
             totalDividend = totalDividend + iterDividend
             totalRights = totalRights + iterRights
             totalProfit = totalProfit + iterProfit
-        # delta = timedelta(days=1)
-        # dateCalcLess1 = dateCalc - delta
 
         # newDeposits = 0
         # depositsToday = DepositWithdraw.objects.filter(date=dateCalc)
         # for depositToday in depositsToday:
-        #     newDeposits = newDeposits + float(depositToday.amount)
+        #      newDeposits = newDeposits + float(depositToday.amount)
         # deposits = DepositWithdraw.calcDeposit(dateCalc)
-        heritage = float(currentSell + currentDividend + currentRights)
-        newLiquidationValue = (heritage / currentBuy - 1) * 100.0 + 100.0
-        newBuy = (currentBuy - priceCurrentBuyIni)
-        if abs(newBuy) <= 0.1:
-            newNumberUnits = numberUnitsIni
-        else:
-            newNumberUnits = heritage / newLiquidationValue
-        #heritage = float(currentSell + currentDividend + currentRights - currentBuy)
-        #newLiquidationValue = ((currentSell / currentBuy) - 1) * 100 + 100
-        #newNumberUnits = numberUnits + (newDeposits / newLiquidationValue)
-        #newNumberUnits = heritage / newLiquidationValue
-        # liquidationValue = heritage / numberUnits
+
+        deposits = 0
+        withdraws = 0
+        B = float(currentSell + currentDividend + currentRights)
+        if currentBuy - priceCurrentBuyIni > 0.1: # Hemos aumentado las posiciones (hemos comprado)
+            deposits = currentBuy - priceCurrentBuyIni
+            print('Deposit: ' + str(deposits))
+            withdraws = 0
+        if currentBuy - priceCurrentBuyIni < -0.1: # Hemos reducido las posiciones (hemos vendido)
+            deposits = 0
+            withdraws = priceCurrentBuyIni - currentBuy
+            print('withdraws: ' + str(withdraws))
+        BN = (B - BIni - deposits + withdraws)
+        BD = (BIni + deposits)
+        R = BN / BD
+        print('BIni: ' + str(BIni))
+        print('B: ' + str(B))
+        print('deposits: ' + str(deposits))
+        print('withdraws: ' + str(withdraws))
+        print('BN: ' + str(BN))
+        print('BD: ' + str(BD))
+        print('R: ' + str(R))
+        print('RIni: ' + str(RIni))
 
         try:
             summ = Summary.objects.get(date=dateCalc) # Si existe el registro, lo actualizamos
@@ -342,8 +352,8 @@ def setSummaryHistory(dateCalc):
         summ.dividendGrossCurrent = currentDividend
         summ.rightsCurrent = currentRights
         summ.profitCurrent = currentProfit
-        summ.liquidationValue = newLiquidationValue
-        summ.numberUnits = newNumberUnits
+        summ.B = B
+        summ.R = R
         summ.save()
         globalVars.toLogFile('setSummaryHistory fin: ' + str(res))
         return res

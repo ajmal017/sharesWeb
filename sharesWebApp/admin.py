@@ -121,7 +121,7 @@ class BrokerComissionsAdmin(admin.ModelAdmin):
 
 
 class SummaryAdmin(admin.ModelAdmin):
-    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','profitabilityCurrent','priceBuyTotal','priceSellTotal','dividendGrossTotal','profitTotal','profitabilityTotal','liquidationValue','numberUnits')
+    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','profitability','B','R','priceBuyTotal','priceSellTotal','profitTotal','dividendGrossTotal',)
 
 
 # Register your models here.
