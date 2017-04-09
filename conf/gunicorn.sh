@@ -28,6 +28,6 @@ exec /usr/local/bin/gunicorn ${DJANGO_WSGI_MODULE}:application \
   --workers $NUM_WORKERS \
   --user=$USER --group=$GROUP \
   --bind=127.0.0.1:8088 \
-  --max-requests=1 \
+#  --max-requests=1 \
   --log-level=debug \
   --log-file=/home/nfs/telegram/logs/gunicornSharesWeb.log

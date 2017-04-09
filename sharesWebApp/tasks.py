@@ -257,11 +257,11 @@ def setSummaryHistory(dateCalc):
             summIni = Summary()
             # depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
             # summIni.date = depositIni.date
-            summIni.date = date(2015,8,19)
+            summIni.date = date(2015,8,18)
             summIni.priceBuyCurrent = 0
             summIni.priceBuyTotal = 0
             #summIni.B = depositIni.amount
-            summIni.B = 249.1
+            summIni.B = 0
             summIni.R = 0
             summIni.save()
             return res
@@ -309,30 +309,36 @@ def setSummaryHistory(dateCalc):
             totalRights = totalRights + iterRights
             totalProfit = totalProfit + iterProfit
 
-        # newDeposits = 0
-        # depositsToday = DepositWithdraw.objects.filter(date=dateCalc)
-        # for depositToday in depositsToday:
-        #      newDeposits = newDeposits + float(depositToday.amount)
-        # deposits = DepositWithdraw.calcDeposit(dateCalc)
+        newDeposits = 0
+        newWithdraws = 0
+        depositsToday = DepositWithdraw.objects.filter(date=dateCalc)
+        for depositToday in depositsToday:
+            if depositToday.amount > 0:
+                newDeposits = newDeposits + float(depositToday.amount)
+            if depositToday.amount < 0:
+                newWithdraws = newWithdraws + float(depositToday.amount)
+        depositsAll = DepositWithdraw.calcDeposit(dateCalc)
+        cash = depositsAll - currentBuy
 
-        deposits = 0
-        withdraws = 0
-        B = float(currentSell + currentDividend + currentRights)
-        if currentBuy - priceCurrentBuyIni > 0.1: # Hemos aumentado las posiciones (hemos comprado)
-            deposits = currentBuy - priceCurrentBuyIni
-            print('Deposit: ' + str(deposits))
-            withdraws = 0
-        if currentBuy - priceCurrentBuyIni < -0.1: # Hemos reducido las posiciones (hemos vendido)
-            deposits = 0
-            withdraws = priceCurrentBuyIni - currentBuy
-            print('withdraws: ' + str(withdraws))
-        BN = (B - BIni - deposits + withdraws)
-        BD = (BIni + deposits)
+        # deposits = 0
+        # withdraws = 0
+        B = float(currentSell + currentDividend + currentRights) + cash
+        # if currentBuy - priceCurrentBuyIni > 0.1: # Hemos aumentado las posiciones (hemos comprado)
+        #     deposits = currentBuy - priceCurrentBuyIni
+        #     print('Deposit: ' + str(deposits))
+        #     withdraws = 0
+        # if currentBuy - priceCurrentBuyIni < -0.1: # Hemos reducido las posiciones (hemos vendido)
+        #     deposits = 0
+        #     withdraws = priceCurrentBuyIni - currentBuy
+        #     print('withdraws: ' + str(withdraws))
+        BN = (B - BIni - newDeposits + newWithdraws)
+        BD = (BIni + newDeposits)
         R = BN / BD
+        print('Cash: ' + str(cash))
         print('BIni: ' + str(BIni))
         print('B: ' + str(B))
-        print('deposits: ' + str(deposits))
-        print('withdraws: ' + str(withdraws))
+        print('deposits: ' + str(newDeposits))
+        print('withdraws: ' + str(newWithdraws))
         print('BN: ' + str(BN))
         print('BD: ' + str(BD))
         print('R: ' + str(R))
