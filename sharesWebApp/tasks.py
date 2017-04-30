@@ -6,7 +6,7 @@ from django.utils import timezone
 from celery import shared_task
 from celery import app
 from datetime import datetime, timedelta, date
-from .models import Currency, Share, Alarm, Summary, Transaction, ShareHistory, DepositWithdraw, CurrencyHistory
+from .models import Currency, Share, Alarm, Summary, Transaction, ShareHistory, DepositWithdraw, CurrencyHistory, calcProfitability
 from django.db.models import Q
 from finance import getShare, getCurrency
 from pandas_datareader import data
@@ -242,6 +242,22 @@ def setCurrencyHistory(sym, startDate, endDate, base="EUR"):
         return False
 
 
+def calcReturnGeom(dateCalc):
+    try:
+        yearCalc = dateCalc.year
+        dateStart = date(yearCalc,1,1)
+        dateEnd = dateCalc
+        summs = Summary.objects.filter(date__gte=dateStart, date__lte=dateEnd).order_by('date')
+        R = 1
+        for summ in summs:
+            R = (1 + float(summ.R)) * R
+        R = R - 1
+        return round(float(R) * 100.0, 4)
+    except Exception as e:
+        globalVars.toLogFile('Error calcReturnGeom: ' + str(e))
+        return 0
+
+
 def setSummaryHistory(dateCalc):
     try:
         if dateCalc.weekday() > 4:  # Weekend: we don't calculate summary
@@ -255,20 +271,17 @@ def setSummaryHistory(dateCalc):
             summIni = summIni[0]
         except Exception as e:
             summIni = Summary()
-            # depositIni = DepositWithdraw.objects.order_by('date')[:1][0]
-            # summIni.date = depositIni.date
             summIni.date = date(2015,8,18)
             summIni.priceBuyCurrent = 0
             summIni.priceBuyTotal = 0
-            #summIni.B = depositIni.amount
-            summIni.B = 0
+            summIni.balance = 0
             summIni.R = 0
             summIni.save()
             return res
 
         dateIni = summIni.date
         priceCurrentBuyIni = float(summIni.priceBuyCurrent)
-        BIni = float(summIni.B)
+        BIni = float(summIni.balance)
         RIni = float(summIni.R)
 
         totalBuy = 0
@@ -309,40 +322,30 @@ def setSummaryHistory(dateCalc):
             totalRights = totalRights + iterRights
             totalProfit = totalProfit + iterProfit
 
-        newDeposits = 0
-        newWithdraws = 0
-        depositsToday = DepositWithdraw.objects.filter(date=dateCalc)
-        for depositToday in depositsToday:
-            if depositToday.amount > 0:
-                newDeposits = newDeposits + float(depositToday.amount)
-            if depositToday.amount < 0:
-                newWithdraws = newWithdraws + float(depositToday.amount)
-        depositsAll = DepositWithdraw.calcDeposit(dateCalc)
-        cash = depositsAll - currentBuy
+        if abs(currentBuy - priceCurrentBuyIni) > 0.1: # Hemos aumentado/disminuido las posiciones (hemos comprado o vendido acciones)
+            try:
+                if summIni.priceBuyCurrent > 0:
+                    summIni.R = (summIni.balance - summIni.priceBuyCurrent) / summIni.priceBuyCurrent
+                else:
+                    summIni.R = 0
+            except Exception as e:
+                globalVars.toLogFile('Error setSummaryHistory: ' + str(e))
+                return False
+        else:
+            summIni.R = 0
+        summIni.save()
 
-        # deposits = 0
-        # withdraws = 0
-        B = float(currentSell + currentDividend + currentRights) + cash
-        # if currentBuy - priceCurrentBuyIni > 0.1: # Hemos aumentado las posiciones (hemos comprado)
-        #     deposits = currentBuy - priceCurrentBuyIni
-        #     print('Deposit: ' + str(deposits))
-        #     withdraws = 0
-        # if currentBuy - priceCurrentBuyIni < -0.1: # Hemos reducido las posiciones (hemos vendido)
-        #     deposits = 0
-        #     withdraws = priceCurrentBuyIni - currentBuy
-        #     print('withdraws: ' + str(withdraws))
-        BN = (B - BIni - newDeposits + newWithdraws)
-        BD = (BIni + newDeposits)
-        R = BN / BD
-        print('Cash: ' + str(cash))
-        print('BIni: ' + str(BIni))
+        B = float(currentSell + currentDividend + currentRights)
+        if currentBuy > 0:
+            R = (B - currentBuy) / currentBuy
+        else:
+            R = 0
+        print('Valor compra cartera: ' +str(currentBuy))
+        print('Valor actual cartera: ' +str(currentSell))
         print('B: ' + str(B))
-        print('deposits: ' + str(newDeposits))
-        print('withdraws: ' + str(newWithdraws))
-        print('BN: ' + str(BN))
-        print('BD: ' + str(BD))
         print('R: ' + str(R))
-        print('RIni: ' + str(RIni))
+        print('Dividends: ' + str(currentDividend))
+        print('Rights: ' + str(currentRights))
 
         try:
             summ = Summary.objects.get(date=dateCalc) # Si existe el registro, lo actualizamos
@@ -358,9 +361,13 @@ def setSummaryHistory(dateCalc):
         summ.dividendGrossCurrent = currentDividend
         summ.rightsCurrent = currentRights
         summ.profitCurrent = currentProfit
-        summ.B = B
+        summ.balance = B
         summ.R = R
         summ.save()
+        returnGeom = calcReturnGeom(dateCalc)
+        summ.returnGeom = returnGeom
+        summ.save()
+        print('returnGeom: ' + str(returnGeom))
         globalVars.toLogFile('setSummaryHistory fin: ' + str(res))
         return res
     except Exception as e:

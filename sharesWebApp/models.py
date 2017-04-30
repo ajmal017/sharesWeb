@@ -18,9 +18,9 @@ def calcProfitability(priceBuy, priceSell, dividendGross, rights, investDays):
         pf_div_po = pf / po
         t = 1.0 / (float(investDays) / 365.0)
         if investDays < 365:
-            return round((pf_div_po - 1) * 100.0, 2)
+            return round((pf_div_po - 1) * 100.0, 4)
         else:
-            return round((pow(pf_div_po, t) - 1.0) * 100.0, 2)
+            return round((pow(pf_div_po, t) - 1.0) * 100.0, 4)
     except Exception as e:
         globalVars.toLogFile('Error calcProfitability: ' + str(e))
         return 0
@@ -389,6 +389,31 @@ class Dividend(models.Model):
     importNet = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Neto')
     currencyValue = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Divisa',  default=1)
 
+    @property
+    def importGrossEur(self):
+        try:
+            if self.pk is not None:
+                return round(self.importGross * (1 / self.currencyValue), 2)
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error importGrossEur: ' + str(e))
+            return 0
+    importGrossEur.fget.short_description = u'Bruto Eur.'
+
+    @property
+    def importNetEur(self):
+        try:
+            if self.pk is not None:
+                return round(self.importNet * (1 / self.currencyValue), 2)
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error importNetEur: ' + str(e))
+            return 0
+    importNetEur.fget.short_description = u'Neto Eur.'
+
+
     class Meta:
         db_table = "Dividend"
         ordering = ["date", "transaction"]
@@ -496,8 +521,9 @@ class Summary(models.Model):
     dividendGrossTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Dividendos')
     rightsTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     profitTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Beneficio')
-    B = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Balance')
-    R = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Rentab. Hoy')
+    balance = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Balance')
+    R = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='R')
+    returnGeom = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Rentab. Geom(%)')
 
     @property
     def investDays(self):
@@ -515,24 +541,13 @@ class Summary(models.Model):
     def profitability(self):
         try:
             if self.pk is not None:
-                yearCalc = self.date.year
-                dateStart = date(yearCalc,1,1)
-                #delta = timedelta(days=1)
-                # dateEnd = self.date - delta
-                dateEnd = self.date
-                summs = Summary.objects.filter(date__gte=dateStart, date__lte=dateEnd).order_by('date')
-                R = 1
-                for summ in summs:
-                    R = (1 + float(summ.R)) * R
-                R = R - 1
-                return round(float(R) * 100.0, 4)
+                return float(self.returnGeom) * 100.0
             else:
                 return 0
         except Exception as e:
-            globalVars.toLogFile('Error Summary.profitability: ' + str(e))
+            globalVars.toLogFile('Error profitability: ' + str(e))
             return 0
-    profitability.fget.short_description = u'Rentab. geom(%)'
-
+    profitability.fget.short_description = u'Rentab. Geom(%)'
 
     class Meta:
         db_table = "Summary"

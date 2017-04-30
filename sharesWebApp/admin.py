@@ -95,7 +95,7 @@ class TransactionAdmin(ImportExportModelAdmin):
 
 
 class DividendAdmin(admin.ModelAdmin):
-    list_display = ('date', 'transaction', 'importGross', 'importNet')
+    list_display = ('date', 'transaction', 'importGross', 'importNet', 'importGrossEur', 'importNetEur')
     search_fields = ('transaction','date')
     raw_id_fields = ('transaction', )
     date_hierarchy = 'date'
@@ -121,7 +121,7 @@ class BrokerComissionsAdmin(admin.ModelAdmin):
 
 
 class SummaryAdmin(admin.ModelAdmin):
-    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','profitability','B','R','priceBuyTotal','priceSellTotal','profitTotal','dividendGrossTotal',)
+    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','balance','R','returnGeom','priceBuyTotal','priceSellTotal','profitTotal','dividendGrossTotal')
 
 
 # Register your models here.
