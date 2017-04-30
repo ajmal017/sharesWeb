@@ -101,6 +101,32 @@ class Index(models.Model):
         return self.name
 
 
+class ShareType(models.Model):
+    name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Tipo Acción')
+
+    class Meta:
+        db_table = "ShareType"
+        ordering = ["name"]
+        verbose_name = "Tipo Acción"
+        verbose_name_plural = "Tipos Acciones"
+
+    def __unicode__(self):
+        return self.name
+
+
+class Sector(models.Model):
+    name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Sector')
+
+    class Meta:
+        db_table = "Sector"
+        ordering = ["name"]
+        verbose_name = "Sector"
+        verbose_name_plural = "Sectores"
+
+    def __unicode__(self):
+        return self.name
+
+
 class Period(models.Model):
     fromDate = models.DateField(blank=False, null=False, verbose_name='Desde')
     toDate = models.DateField(blank=False, null=False, verbose_name='Hasta')
@@ -134,11 +160,14 @@ class Share(models.Model):
     ISIN = models.CharField(max_length=20, blank=True, null=True)
     currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa', default=1)
     index = models.ForeignKey(Index, db_column='idIndex', blank=True, null=True, verbose_name='Mercado')
+    shareType = models.ForeignKey(ShareType, db_column='idShareType', blank=True, null=True, verbose_name='Tipo')
+    sector = models.ForeignKey(Sector, db_column='idSector', blank=True, null=True, verbose_name='Sector')
     tickerGoogle = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerGoo')
     tickerYahoo = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerYah')
     favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
     description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
     fonds = models.ManyToManyField(Fond, through='ShareFonds', through_fields=('share', 'fond'))
+    targetValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Objetivo')
     lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
     datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
@@ -188,8 +217,28 @@ class ShareFonds(models.Model):
     share = models.ForeignKey(Share, db_column='idShare', verbose_name='Acción')
     fond = models.ForeignKey(Fond, db_column='idFond', verbose_name='Fondo')
     period = models.ForeignKey(Period, db_column='idPeriod', verbose_name='Periodo')
+    percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='% del fondo')
+    count = models.IntegerField(null=True, blank=True, verbose_name='Count')
     minPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Mínimo')
     maxPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Máximo')
+    avgPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Medio')
+    minVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Mínimo')
+    maxVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Máximo')
+    avgVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Medio')
+    favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
+
+    @property
+    def lastValue(self):
+        try:
+            if self.pk is not None:
+                return self.share.lastValue
+            else:
+                return 0
+        except Exception as e:
+            globalVars.toLogFile('Error lastValue: ' + str(e))
+            return 0
+    lastValue.fget.short_description = u'Ult. Valor'
+
 
     class Meta:
         db_table = "ShareFond"
@@ -516,38 +565,13 @@ class Summary(models.Model):
     dividendGrossCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     rightsCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     profitCurrent = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Beneficio')
+    profitabilityCurrent = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, verbose_name='Rentab. Actual(%)')
     priceBuyTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Compra')
     priceSellTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Venta')
     dividendGrossTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Dividendos')
     rightsTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cartera Dividendos')
     profitTotal = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Total Beneficio')
-    balance = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Balance')
-    R = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='R')
-    returnGeom = models.DecimalField(max_digits=14, decimal_places=8, null=True, blank=True, verbose_name='Rentab. Geom(%)')
 
-    @property
-    def investDays(self):
-        try:
-            if self.pk is not None:
-                return (self.date - date(2015,8,20)).days
-            else:
-                return 0
-        except Exception as e:
-            globalVars.toLogFile('Error investDays: ' + str(e))
-            return 0
-    investDays.fget.short_description = u'Días invertidos'
-
-    @property
-    def profitability(self):
-        try:
-            if self.pk is not None:
-                return float(self.returnGeom) * 100.0
-            else:
-                return 0
-        except Exception as e:
-            globalVars.toLogFile('Error profitability: ' + str(e))
-            return 0
-    profitability.fget.short_description = u'Rentab. Geom(%)'
 
     class Meta:
         db_table = "Summary"

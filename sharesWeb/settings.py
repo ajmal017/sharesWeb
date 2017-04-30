@@ -91,6 +91,7 @@ DATABASES = {
         'USER': 'root',
         'PASSWORD': 'SGP24121976',
         'HOST': 'localhost',   # Or an IP Address that your DB is hosted on
+        #'HOST': 'debian84',
         'PORT': '3306',
     }
 }

@@ -9,8 +9,10 @@ from datetime import datetime, timedelta, date
 from .models import Currency, Share, Alarm, Summary, Transaction, ShareHistory, DepositWithdraw, CurrencyHistory, calcProfitability
 from django.db.models import Q
 from finance import getShare, getCurrency
+from forex_python.converter import CurrencyRates
 from pandas_datareader import data
-from pandas_datareader.oanda import get_oanda_currency_historical_rates
+#from pandas_datareader.oanda import get_oanda_currency_historical_rates
+from pandas_datareader.fred import FredReader
 import pandas as pd
 from decimal import Decimal
 import globalVars
@@ -63,7 +65,7 @@ def updateCurrency():
                 res = False
                 globalVars.toLogFile('Error updateCurrency - currency: ' + currency.ticker + ' ' + str(e))
         globalVars.toLogFile('updateCurrency fin: ' + str(res))
-        calcSummary()
+        # calcSummary()
         return res
     except Exception as e:
         globalVars.toLogFile('Error updateCurrency: ' + str(e))
@@ -124,46 +126,12 @@ def calcSummary():
         globalVars.toLogFile('calcSummary inicio')
         res = True
         today = timezone.now().date()
-        try:
-            summ = Summary.objects.get(date=today)
-        except Summary.DoesNotExist:
-            summ = Summary(date=today)
-        totalBuy = 0
-        totalSell = 0
-        totalDividend = 0
-        totalRights = 0
-        totalProfit = 0
-        currentBuy = 0
-        currentSell = 0
-        currentDividend = 0
-        currentRights = 0
-        currentProfit = 0
-        transacs = Transaction.objects.all()
-        for transac in transacs:
-            if not transac.priceSellUnity:
-                currentBuy = currentBuy + transac.priceBuyTotal
-                currentSell = currentSell + transac.priceSellTotal
-                currentDividend = currentDividend + transac.dividendGross
-                currentRights = currentRights + transac.rights
-                currentProfit = currentProfit + transac.profit
-                #globalVars.toLogFile('Accion: ' + transac.share.name + '. Beneficio: ' +str(round(transac.profit,2)))
-            totalBuy = totalBuy + transac.priceBuyTotal
-            totalSell = totalSell + transac.priceSellTotal
-            totalDividend = totalDividend + transac.dividendGross
-            totalRights = totalRights + transac.rights
-            totalProfit = totalProfit + transac.profit
-        summ.priceBuyTotal = totalBuy
-        summ.priceSellTotal = totalSell
-        summ.dividendGrossTotal = totalDividend
-        summ.rightsTotal = totalRights
-        summ.profitTotal = totalProfit
-        summ.priceBuyCurrent = currentBuy
-        summ.priceSellCurrent = currentSell
-        summ.dividendGrossCurrent = currentDividend
-        summ.rightsCurrent = currentRights
-        summ.profitCurrent = currentProfit
-        summ.save()
-        globalVars.toLogFile('calcSummary fin: ' + str(res))
+        today =  today +timedelta(days=-2)
+        setAllShareHistory(today, today)
+        setCurrencyHistory(today, today)
+        setSummaryHistory(today)
+        setAllNewShareHistory()
+        globalVars.toLogFile('calcSummary fin')
         return res
     except Exception as e:
         globalVars.toLogFile('Error calcSummary: ' + str(e))
@@ -173,7 +141,16 @@ def calcSummary():
 def setShareHistory(tickYahoo, startDate, endDate):
     try:
         s = Share.objects.get(tickerYahoo=tickYahoo)
-        p = data.DataReader(tickYahoo, 'yahoo', startDate, endDate)
+        ok = False
+        retries = 5
+        while (retries > 0)  and (not ok):
+            try:
+                p = data.DataReader(tickYahoo, 'yahoo', startDate, endDate)
+                ok = True
+            except Exception as e:
+                retries = retries - 1
+        if not ok:
+            raise Exception('Error intentando obtener histórico acción ' + tickYahoo + ' con pandas')
         daterange = pd.date_range(startDate, endDate)
         for single_date in daterange:
             try:
@@ -189,7 +166,6 @@ def setShareHistory(tickYahoo, startDate, endDate):
                 hist.low = sh[2]
                 hist.close = sh[3]
                 hist.volume = sh[4]
-                # hist.close =
                 hist.save()
             except Exception as e:
                 pass
@@ -201,38 +177,62 @@ def setShareHistory(tickYahoo, startDate, endDate):
 
 def setAllShareHistory(startDate, endDate):
     try:
-        trs = Transaction.objects.all()
-        for tr in trs:
-            ticker = tr.share.tickerYahoo
+        shs = Share.objects.all()
+        for sh in shs:
+            ticker = sh.tickerYahoo
             setShareHistory(ticker, startDate, endDate)
         return True
     except Exception as e:
-        globalVars.toLogFile('Error getShareHistory: ' + str(e))
+        globalVars.toLogFile('Error setAllShareHistory: ' + str(e))
         return False
 
 
-def setCurrencyHistory(sym, startDate, endDate, base="EUR"):
+def setAllNewShareHistory():
     try:
-        c = Currency.objects.get(symbol=sym)
+        startDate = date(2000,1,1)
+        endDate = timezone.now().date()
+        shs = Share.objects.all()
+        for sh in shs:
+            #if (ShareHistory.objects.filter(share = sh).count() == 0):
+            if (True):
+                ticker = sh.tickerYahoo
+                setShareHistory(ticker, startDate, endDate)
+        return True
+    except Exception as e:
+        globalVars.toLogFile('Error setAllNewShareHistory: ' + str(e))
+        return False
 
-        p = get_oanda_currency_historical_rates(
-            startDate, endDate,
-            quote_currency=sym,
-            base_currency=base
-        )
 
+def setCurrencyHistory(startDate, endDate):
+    try:
         daterange = pd.date_range(startDate, endDate)
         for single_date in daterange:
             try:
-                value = p.ix[single_date]
-                try:
-                    hist = CurrencyHistory.objects.get(currency=c, date=single_date)
-                except CurrencyHistory.DoesNotExist:
-                    hist = CurrencyHistory()
-                hist.currency = c
-                hist.date = single_date
-                hist.close = value
-                hist.save()
+                ok = False
+                retries = 5
+                while (retries > 0)  and (not ok):
+                    try:
+                        cur = CurrencyRates()
+                        rates = cur.get_rates('EUR', single_date)
+                        ok = True
+                    except Exception as e:
+                        retries = retries - 1
+                if not ok:
+                    raise Exception('Error intentando obtener histórico divisas ' + c.symbol)
+                currencies = Currency.objects.filter(update=True)
+                for c in currencies:
+                    try:
+                        value = rates[c.symbol]
+                        try:
+                            hist = CurrencyHistory.objects.get(currency=c, date=single_date)
+                        except CurrencyHistory.DoesNotExist:
+                            hist = CurrencyHistory()
+                        hist.currency = c
+                        hist.date = single_date
+                        hist.close = value
+                        hist.save()
+                    except Exception as e:
+                        globalVars.toLogFile('Error setCurrencyHistory: ' + str(e))
             except Exception as e:
                 globalVars.toLogFile('Error setCurrencyHistory: ' + str(e))
                 # pass
@@ -242,47 +242,12 @@ def setCurrencyHistory(sym, startDate, endDate, base="EUR"):
         return False
 
 
-def calcReturnGeom(dateCalc):
-    try:
-        yearCalc = dateCalc.year
-        dateStart = date(yearCalc,1,1)
-        dateEnd = dateCalc
-        summs = Summary.objects.filter(date__gte=dateStart, date__lte=dateEnd).order_by('date')
-        R = 1
-        for summ in summs:
-            R = (1 + float(summ.R)) * R
-        R = R - 1
-        return round(float(R) * 100.0, 4)
-    except Exception as e:
-        globalVars.toLogFile('Error calcReturnGeom: ' + str(e))
-        return 0
-
-
 def setSummaryHistory(dateCalc):
     try:
         if dateCalc.weekday() > 4:  # Weekend: we don't calculate summary
             globalVars.toLogFile('setSummaryHistory: el día seleccionado es festivo')
             return True
-        globalVars.toLogFile('setSummaryHistory inicio')
         res = True
-
-        try:
-            summIni = Summary.objects.filter(date__lt=dateCalc).order_by('-date')[:1]
-            summIni = summIni[0]
-        except Exception as e:
-            summIni = Summary()
-            summIni.date = date(2015,8,18)
-            summIni.priceBuyCurrent = 0
-            summIni.priceBuyTotal = 0
-            summIni.balance = 0
-            summIni.R = 0
-            summIni.save()
-            return res
-
-        dateIni = summIni.date
-        priceCurrentBuyIni = float(summIni.priceBuyCurrent)
-        BIni = float(summIni.balance)
-        RIni = float(summIni.R)
 
         totalBuy = 0
         totalSell = 0
@@ -322,31 +287,6 @@ def setSummaryHistory(dateCalc):
             totalRights = totalRights + iterRights
             totalProfit = totalProfit + iterProfit
 
-        if abs(currentBuy - priceCurrentBuyIni) > 0.1: # Hemos aumentado/disminuido las posiciones (hemos comprado o vendido acciones)
-            try:
-                if summIni.priceBuyCurrent > 0:
-                    summIni.R = (summIni.balance - summIni.priceBuyCurrent) / summIni.priceBuyCurrent
-                else:
-                    summIni.R = 0
-            except Exception as e:
-                globalVars.toLogFile('Error setSummaryHistory: ' + str(e))
-                return False
-        else:
-            summIni.R = 0
-        summIni.save()
-
-        B = float(currentSell + currentDividend + currentRights)
-        if currentBuy > 0:
-            R = (B - currentBuy) / currentBuy
-        else:
-            R = 0
-        print('Valor compra cartera: ' +str(currentBuy))
-        print('Valor actual cartera: ' +str(currentSell))
-        print('B: ' + str(B))
-        print('R: ' + str(R))
-        print('Dividends: ' + str(currentDividend))
-        print('Rights: ' + str(currentRights))
-
         try:
             summ = Summary.objects.get(date=dateCalc) # Si existe el registro, lo actualizamos
         except Summary.DoesNotExist:
@@ -361,14 +301,8 @@ def setSummaryHistory(dateCalc):
         summ.dividendGrossCurrent = currentDividend
         summ.rightsCurrent = currentRights
         summ.profitCurrent = currentProfit
-        summ.balance = B
-        summ.R = R
+        summ.profitabilityCurrent = calcProfitability(currentBuy, currentSell, currentDividend, currentRights, 1)
         summ.save()
-        returnGeom = calcReturnGeom(dateCalc)
-        summ.returnGeom = returnGeom
-        summ.save()
-        print('returnGeom: ' + str(returnGeom))
-        globalVars.toLogFile('setSummaryHistory fin: ' + str(res))
         return res
     except Exception as e:
         globalVars.toLogFile('Error setSummaryHistory: ' + str(e))

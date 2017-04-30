@@ -7,7 +7,7 @@ from django.contrib import admin
 from models import Currency, Broker, Index, Period, Fond, Share, ShareHistory
 from models import Alarm, ShareFonds, Transaction, Dividend, Right
 from models import DepositWithdraw, BrokerComissions, Summary, ShareHistory
-from models import CurrencyHistory
+from models import CurrencyHistory, ShareType, Sector
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
@@ -29,6 +29,16 @@ class BrokerAdmin(admin.ModelAdmin):
     search_fields = ('name', )
 
 
+class ShareTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+    search_fields = ('name', )
+
+
+class SectorAdmin(admin.ModelAdmin):
+    list_display = ('name', )
+    search_fields = ('name', )
+
+
 class IndexAdmin(admin.ModelAdmin):
     list_display = ('name', )
     search_fields = ('name', )
@@ -46,7 +56,7 @@ class FondAdmin(admin.ModelAdmin):
 
 
 class ShareAdmin(admin.ModelAdmin):
-    list_display = ('name', 'ISIN', 'index', 'tickerGoogle', 'tickerYahoo', 'update', 'lastValue', 'datetime', 'close', 'change', 'openValue')
+    list_display = ('name', 'ISIN', 'index', 'shareType', 'sector', 'targetValue', 'lastValue', 'datetime', 'close', 'change', 'openValue')
     search_fields = ('name', 'ISIN', 'ticker')
 
 
@@ -64,7 +74,7 @@ class AlarmAdmin(admin.ModelAdmin):
 
 
 class ShareFondsAdmin(admin.ModelAdmin):
-    list_display = ('share', 'fond', 'period')
+    list_display = ('share', 'fond', 'period', 'percent', 'lastValue', 'count', 'minPrice', 'maxPrice', 'avgPrice', 'minVolume', 'maxVolume', 'avgVolume', 'favourite')
     search_fields = ('share', 'fond', 'period')
     raw_id_fields = ('share', )
 
@@ -121,14 +131,16 @@ class BrokerComissionsAdmin(admin.ModelAdmin):
 
 
 class SummaryAdmin(admin.ModelAdmin):
-    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitCurrent','balance','R','returnGeom','priceBuyTotal','priceSellTotal','profitTotal','dividendGrossTotal')
-
+    list_display = ('date','priceBuyCurrent','priceSellCurrent','dividendGrossCurrent','profitabilityCurrent','priceBuyTotal','priceSellTotal','profitTotal','dividendGrossTotal')
+    date_hierarchy = 'date'
 
 # Register your models here.
 admin.site.register(Currency, CurrencyAdmin)
 admin.site.register(CurrencyHistory, CurrencyHistoryAdmin)
 admin.site.register(Broker, BrokerAdmin)
 admin.site.register(Index, IndexAdmin)
+admin.site.register(ShareType, ShareTypeAdmin)
+admin.site.register(Sector, SectorAdmin)
 admin.site.register(Period, PeriodAdmin)
 admin.site.register(Fond, FondAdmin)
 admin.site.register(Share, ShareAdmin)
@@ -141,4 +153,3 @@ admin.site.register(Right, RightAdmin)
 admin.site.register(DepositWithdraw, DepositWithdrawAdmin)
 admin.site.register(BrokerComissions, BrokerComissionsAdmin)
 admin.site.register(Summary, SummaryAdmin)
-
