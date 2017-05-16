@@ -65,7 +65,7 @@ def updateCurrency():
                 res = False
                 globalVars.toLogFile('Error updateCurrency - currency: ' + currency.ticker + ' ' + str(e))
         globalVars.toLogFile('updateCurrency fin: ' + str(res))
-        # calcSummary()
+        calcSummary()
         return res
     except Exception as e:
         globalVars.toLogFile('Error updateCurrency: ' + str(e))
@@ -127,10 +127,10 @@ def calcSummary():
         res = True
         today = timezone.now().date()
         today =  today +timedelta(days=-2)
-        setAllShareHistory(today, today)
-        setCurrencyHistory(today, today)
+        # setAllShareHistory(today, today)
+        # setCurrencyHistory(today, today)
         setSummaryHistory(today)
-        setAllNewShareHistory()
+        # setAllNewShareHistory()
         globalVars.toLogFile('calcSummary fin')
         return res
     except Exception as e:
@@ -189,7 +189,7 @@ def setAllShareHistory(startDate, endDate):
 
 def setAllNewShareHistory():
     try:
-        startDate = date(2000,1,1)
+        startDate = date(2006,1,1)
         endDate = timezone.now().date()
         shs = Share.objects.all()
         for sh in shs:
