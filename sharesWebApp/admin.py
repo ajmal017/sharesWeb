@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 #from django.core.urlresolvers import reverse
+#from django import forms
 from django.utils.html import format_html
 from django.contrib import admin
-from models import Currency, Broker, Index, Period, Fond, Share, ShareHistory
-from models import Alarm, ShareFonds, Transaction, Dividend, Right
-from models import DepositWithdraw, BrokerComissions, Summary, ShareHistory
-from models import CurrencyHistory, ShareType, Sector
+from sharesWebApp.models import Currency, Broker, Index, Period, Fond, Share, ShareHistory
+from sharesWebApp.models import Alarm, ShareFonds, Transaction, Dividend, Right
+from sharesWebApp.models import DepositWithdraw, BrokerComissions, Summary, ShareHistory
+from sharesWebApp.models import CurrencyHistory, ShareType, Sector
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
@@ -57,8 +58,13 @@ class FondAdmin(admin.ModelAdmin):
 
 class ShareAdmin(admin.ModelAdmin):
     list_display = ('name', 'ISIN', 'index', 'shareType', 'sector', 'targetValue', 'lastValue', 'datetime', 'close', 'change', 'openValue')
-    search_fields = ('name', 'ISIN', 'ticker')
+    search_fields = ('name', 'ISIN')
 
+#    def formfield_for_dbfield(self, db_field, **kwargs):
+#      formfield = super(ShareAdmin, self).formfield_for_dbfield(db_field, **kwargs)
+#      if db_field.name == 'description':
+#        formfield.widget = forms.Textarea(attrs=formfield.widget.attrs)
+#      return formfield
 
 class ShareHistoryAdmin(admin.ModelAdmin):
     list_display = ('share','date','open','close','high','low','change','volume')
@@ -81,7 +87,7 @@ class ShareFondsAdmin(admin.ModelAdmin):
 
 class TransactionAdmin(ImportExportModelAdmin):
     list_display = ('dateBuy','dateSell','share','getShareLastValue','sharesBuy','priceBuyTotal','priceSellTotal','dividendGross','rights','IRPF','profit','profitability')
-    search_fields = ('share', )
+    search_fields = ('share__name', )
     raw_id_fields = ('share', )
     date_hierarchy = 'dateBuy'
 
@@ -106,7 +112,7 @@ class TransactionAdmin(ImportExportModelAdmin):
 
 class DividendAdmin(admin.ModelAdmin):
     list_display = ('date', 'transaction', 'importGross', 'importNet', 'importGrossEur', 'importNetEur')
-    search_fields = ('transaction','date')
+    search_fields = ('transaction__share__name', )
     raw_id_fields = ('transaction', )
     date_hierarchy = 'date'
 

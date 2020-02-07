@@ -1,3 +1,5 @@
+SET SQL_SAFE_UPDATES = 0;
+
 -- Actualizar las carteras de fondos trimestrales con los valores minimo, maximo y media de cada accion
 UPDATE ShareFond AS sf
 INNER JOIN (
@@ -46,3 +48,14 @@ SELECT YEAR(`date`),MIN(priceBuyCurrent) AS min,MAX(priceBuyCurrent) AS max,AVG(
 FROM SHARE.Summary
 WHERE `date` >'2015-08-19'
 GROUP BY YEAR(`date`);
+
+
+
+-- Calcular los dividendos en un periodo:
+SELECT `date`, A.`name`, importGross as bruto, importNet as Neto , importGross/currencyValue as BrutoEur, importNet/currencyValue as NetoEur, currencyValue
+FROM Dividend D
+INNER JOIN `Transaction` TR ON D.idTransaction = TR.Id
+INNER JOIN `Share` A ON A.id = TR.idShare
+WHERE `date` >='2018/01/01' and `date` <'2019/01/01'
+ORDER BY `date`;
+

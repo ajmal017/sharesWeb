@@ -11,6 +11,7 @@ from django.db.models import Q
 from finance import getShare, getCurrency
 from forex_python.converter import CurrencyRates
 from pandas_datareader import data
+import fix_yahoo_finance
 #from pandas_datareader.oanda import get_oanda_currency_historical_rates
 from pandas_datareader.fred import FredReader
 import pandas as pd
@@ -145,12 +146,13 @@ def setShareHistory(tickYahoo, startDate, endDate):
         retries = 5
         while (retries > 0)  and (not ok):
             try:
-                p = data.DataReader(tickYahoo, 'yahoo', startDate, endDate)
+                p = data.get_data_yahoo(tickYahoo, startDate, endDate)
                 ok = True
             except Exception as e:
+                globalVars.toLogFile('Error setShareHistory: ' + str(e))
                 retries = retries - 1
         if not ok:
-            raise Exception('Error intentando obtener histórico acción ' + tickYahoo + ' con pandas')
+            raise Exception('Error intentando obtener historico accion ' + tickYahoo + ' con pandas')
         daterange = pd.date_range(startDate, endDate)
         for single_date in daterange:
             try:
@@ -189,7 +191,7 @@ def setAllShareHistory(startDate, endDate):
 
 def setAllNewShareHistory():
     try:
-        startDate = date(2006,1,1)
+        startDate = date(2015,8,19)
         endDate = timezone.now().date()
         shs = Share.objects.all()
         for sh in shs:
@@ -218,7 +220,7 @@ def setCurrencyHistory(startDate, endDate):
                     except Exception as e:
                         retries = retries - 1
                 if not ok:
-                    raise Exception('Error intentando obtener histórico divisas ' + c.symbol)
+                    raise Exception('Error intentando obtener historico divisas ' + c.symbol)
                 currencies = Currency.objects.filter(update=True)
                 for c in currencies:
                     try:
@@ -245,7 +247,7 @@ def setCurrencyHistory(startDate, endDate):
 def setSummaryHistory(dateCalc):
     try:
         if dateCalc.weekday() > 4:  # Weekend: we don't calculate summary
-            globalVars.toLogFile('setSummaryHistory: el día seleccionado es festivo')
+            globalVars.toLogFile('setSummaryHistory: el dia seleccionado es festivo')
             return True
         res = True
 

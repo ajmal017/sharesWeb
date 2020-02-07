@@ -54,12 +54,12 @@ class Currency(models.Model):
         verbose_name = "Divisa"
         verbose_name_plural = "Divisas"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
 class CurrencyHistory(models.Model):
-    currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa')
+    currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa', on_delete=models.PROTECT)
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
     change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
@@ -70,10 +70,8 @@ class CurrencyHistory(models.Model):
         verbose_name = "Histórico Divisas"
         verbose_name_plural = "Histórico Divisas"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.currency.name  + ' - '  + '{:%d/%m/%Y}'.format(self.date)
-
-
 
 class Broker(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombre')
@@ -84,7 +82,7 @@ class Broker(models.Model):
         verbose_name = "Broker"
         verbose_name_plural = "Brokers"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -97,7 +95,7 @@ class Index(models.Model):
         verbose_name = "Mercado"
         verbose_name_plural = "Mercados"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -107,10 +105,10 @@ class ShareType(models.Model):
     class Meta:
         db_table = "ShareType"
         ordering = ["name"]
-        verbose_name = "Tipo Acción"
+        verbose_name = "Tipo Accion"
         verbose_name_plural = "Tipos Acciones"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -123,7 +121,7 @@ class Sector(models.Model):
         verbose_name = "Sector"
         verbose_name_plural = "Sectores"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -137,9 +135,8 @@ class Period(models.Model):
         verbose_name = "Periodo"
         verbose_name_plural = "Periodos"
 
-    def __unicode__(self):
+    def __str__(self):
         return '{:%d/%m/%Y}'.format(self.fromDate) + ' - ' + '{:%d/%m/%Y}'.format(self.toDate)
-
 
 class Fond(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombre')
@@ -151,50 +148,50 @@ class Fond(models.Model):
         verbose_name = "Fondo"
         verbose_name_plural = "Fondos"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
 class Share(models.Model):
-    name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombre')
-    ISIN = models.CharField(max_length=20, blank=True, null=True)
-    currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa', default=1)
-    index = models.ForeignKey(Index, db_column='idIndex', blank=True, null=True, verbose_name='Mercado')
-    shareType = models.ForeignKey(ShareType, db_column='idShareType', blank=True, null=True, verbose_name='Tipo')
-    sector = models.ForeignKey(Sector, db_column='idSector', blank=True, null=True, verbose_name='Sector')
-    tickerGoogle = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerGoo')
-    tickerYahoo = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerYah')
-    favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
-    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
-    fonds = models.ManyToManyField(Fond, through='ShareFonds', through_fields=('share', 'fond'))
-    targetValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Objetivo')
-    lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
-    datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
-    close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
-    change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
-    openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
-    update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
+   name = models.CharField(max_length=255, blank=False, null=False, verbose_name='Nombre')
+   ISIN = models.CharField(max_length=20, blank=True, null=True)
+   currency = models.ForeignKey(Currency, db_column='idCurrency', verbose_name='Divisa', default=1, on_delete=models.PROTECT)
+   index = models.ForeignKey(Index, db_column='idIndex', blank=True, null=True, verbose_name='Mercado', on_delete=models.PROTECT)
+   shareType = models.ForeignKey(ShareType, db_column='idShareType', blank=True, null=True, verbose_name='Tipo', on_delete=models.PROTECT)
+   sector = models.ForeignKey(Sector, db_column='idSector', blank=True, null=True, verbose_name='Sector', on_delete=models.PROTECT)
+   tickerGoogle = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerGoo')
+   tickerYahoo = models.CharField(max_length=20, blank=True, null=True, verbose_name='TickerYah')
+   favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
+   description  =  models.TextField(max_length=8000, blank=True, null=True, verbose_name='Notas')
+   fonds = models.ManyToManyField(Fond, through='ShareFonds', through_fields=('share', 'fond'))
+   targetValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Objetivo')
+   lastValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Valor')
+   datetime = models.DateTimeField(blank=True, null=True, verbose_name='Actual.')
+   close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
+   change = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Cambio (%)')
+   openValue = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
+   update = models.BooleanField(blank=False, null=False, verbose_name='Actualizar', default=True)
 
-    def getValueAtDate(self, dateCalc):
-        try:
-            sh = ShareHistory.objects.get(share=self, date=dateCalc)
-            return sh.close
-        except Exception as e:
-            globalVars.toLogFile('Error getValueAtDate recuperando histórico acción: ' + str(e))
-            return self.lastValue
+   def getValueAtDate(self, dateCalc):
+     try:
+        sh = ShareHistory.objects.get(share=self, date=dateCalc)
+        return sh.close
+     except Exception as e:
+        globalVars.toLogFile('Error getValueAtDate recuperando histórico acción: ' + str(e))
+        return self.lastValue
 
-    class Meta:
-        db_table = "Share"
-        ordering = ["name"]
-        verbose_name = "Acción"
-        verbose_name_plural = "Acciones"
+   class Meta:
+     db_table = "Share"
+     ordering = ["name"]
+     verbose_name = "Acción"
+     verbose_name_plural = "Acciones"
 
-    def __unicode__(self):
-        return self.name
+   def __str__(self):
+     return self.name
 
 
 class ShareHistory(models.Model):
-    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Acción')
+    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Accion', on_delete=models.PROTECT)
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
     open = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Apertura')
     close = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Cierre')
@@ -209,21 +206,21 @@ class ShareHistory(models.Model):
         verbose_name = "Histórico Acciones"
         verbose_name_plural = "Histórico Acciones"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.share.name  + ' - '  + '{:%d/%m/%Y}'.format(self.date)
 
 
 class ShareFonds(models.Model):
-    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Acción')
-    fond = models.ForeignKey(Fond, db_column='idFond', verbose_name='Fondo')
-    period = models.ForeignKey(Period, db_column='idPeriod', verbose_name='Periodo')
+    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Accion', on_delete=models.PROTECT)
+    fond = models.ForeignKey(Fond, db_column='idFond', verbose_name='Fondo', on_delete=models.PROTECT)
+    period = models.ForeignKey(Period, db_column='idPeriod', verbose_name='Periodo', on_delete=models.PROTECT)
     percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='% del fondo')
     count = models.IntegerField(null=True, blank=True, verbose_name='Count')
-    minPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Mínimo')
-    maxPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Máximo')
+    minPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Minimo')
+    maxPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Maximo')
     avgPrice = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Precio Medio')
-    minVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Mínimo')
-    maxVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Máximo')
+    minVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Minimo')
+    maxVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Maximo')
     avgVolume = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True, verbose_name='Vol. Medio')
     favourite = models.BooleanField(blank=False, null=False, verbose_name='Favorito')
 
@@ -245,15 +242,15 @@ class ShareFonds(models.Model):
         verbose_name = "Acciones del Fondo"
         verbose_name_plural = "Acciones de los Fondos"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.fond.name + ' - ' + self.share.name  + ' - '  + '{:%d/%m/%Y}'.format(self.period.fromDate) + ' - ' + '{:%d/%m/%Y}'.format(self.period.toDate)
 
 
 class Transaction(models.Model):
-    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Accion')
+    share = models.ForeignKey(Share, db_column='idShare', verbose_name='Accion', on_delete=models.PROTECT)
     dateBuy = models.DateField(blank=False, null=False, verbose_name='Fecha Compra')
     dateSell = models.DateField(blank=True, null=True, verbose_name='Fecha Venta')
-    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1)
+    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1, on_delete=models.PROTECT)
     sharesBuy = models.IntegerField(null=False, blank=False, verbose_name='Cantidad Compra')
     sharesSell = models.IntegerField(null=True, blank=True, verbose_name='Cantidad Venta')
     priceBuyUnity = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Precio Unit. Compra')
@@ -262,6 +259,7 @@ class Transaction(models.Model):
     comissionSell = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Comision Venta')
     currencyValueBuy = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Divisa compra',  default=1)
     currencyValueSell = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name='Divisa venta',  default=1)
+    description  =  models.TextField(max_length=8000, blank=True, null=True, verbose_name='Notas')
 
     @property
     def priceBuyTotal(self):
@@ -288,13 +286,13 @@ class Transaction(models.Model):
                 else:
                     comission = self.comissionBuy
                 if self.priceSellUnity > 0:
-                    return round((self.priceSellUnity * numShares * (1 / self.currencyValueSell)) - comission, 4)
+                    return round((self.priceSellUnity * numShares * (1 / self.currencyValueSell)) - comission, 2)
                 else:
                     if (self.currencyValueBuy != 1):
                         currency = self.share.currency.lastValue
                     else:
                         currency = 1
-                    return round((self.share.lastValue * numShares * (1 / currency)) - comission, 4)
+                    return round((self.share.lastValue * numShares * (1 / currency)) - comission, 2)
             else:
                 return 0
         except Exception as e:
@@ -317,7 +315,7 @@ class Transaction(models.Model):
                         d = div.importNet
                     d = d * (1 / div.currencyValue)
                     total = total + d
-            return round(total, 4)
+            return round(total, 2)
         except Exception as e:
             globalVars.toLogFile('Error getDividend: ' + str(e))
             return 0
@@ -334,7 +332,7 @@ class Transaction(models.Model):
                     r = right.importGross
                     r = r * (1 / right.currencyValue)
                     total = total + r
-            return round(total, 4)
+            return round(total, 2)
         except Exception as e:
             globalVars.toLogFile('Error getRigths: ' + str(e))
             return 0
@@ -342,7 +340,7 @@ class Transaction(models.Model):
     def getProfit(self, dateTo=None):
         try:
             if self.pk is not None:
-                return float(self.priceSellTotal) + float(self.getDividend(True, dateTo)) + float(self.getRights(dateTo)) - float(self.priceBuyTotal)
+                return round(float(self.priceSellTotal) + float(self.getDividend(True, dateTo)) + float(self.getRights(dateTo)) - float(self.priceBuyTotal), 2)
             else:
                 return 0
         except Exception as e:
@@ -413,7 +411,7 @@ class Transaction(models.Model):
     def profitability(self):
         try:
             if self.pk is not None:
-                return calcProfitability(self.priceBuyTotal, self.priceSellTotal, self.getDividend(True), self.getRights(), self.investDays)
+                return round(calcProfitability(self.priceBuyTotal, self.priceSellTotal, self.getDividend(True), self.getRights(), self.investDays), 2)
             else:
                 return 0
         except Exception as e:
@@ -427,16 +425,17 @@ class Transaction(models.Model):
         verbose_name = "Transacción"
         verbose_name_plural = "Transacciones"
 
-    def __unicode__(self):
+    def __str__(self):
         return '{:%d/%m/%Y}'.format(self.dateBuy) + ' - ' + self.share.name
 
 
 class Dividend(models.Model):
-    transaction = models.ForeignKey(Transaction, db_column='idTransaction', verbose_name='Transacción')
+    transaction = models.ForeignKey(Transaction, db_column='idTransaction', verbose_name='Transaccion', on_delete=models.PROTECT)
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
     importGross = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Bruto')
     importNet = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Neto')
     currencyValue = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Divisa',  default=1)
+    description = models.TextField(max_length=8000, blank=True, null=True, verbose_name='Notas')
 
     @property
     def importGrossEur(self):
@@ -469,7 +468,7 @@ class Dividend(models.Model):
         verbose_name = "Dividendos"
         verbose_name_plural = "Dividendos"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.transaction.share.name + ' - ' + '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.transaction.broker.name
 
 
@@ -477,10 +476,11 @@ class Dividend(models.Model):
 # derechos. La compra de derechos, la gestionamos como compra normal y corriente de acciones normalizando
 # los precios
 class Right(models.Model):
-    transaction = models.ForeignKey(Transaction, db_column='idTransaction', verbose_name='Transacción')
+    transaction = models.ForeignKey(Transaction, db_column='idTransaction', verbose_name='Transaccion', on_delete=models.PROTECT)
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
     importGross = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
     currencyValue = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Divisa',  default=1)
+    description = models.TextField(max_length=8000, blank=True, null=True, verbose_name='Notas')
 
     class Meta:
         db_table = "Right"
@@ -488,15 +488,15 @@ class Right(models.Model):
         verbose_name = "Derechos"
         verbose_name_plural = "Derechos"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.transaction.share.name + ' - ' + '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.transaction.broker.name
 
 
 class DepositWithdraw(models.Model):
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
-    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1)
+    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1, on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
-    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
+    description  =  models.TextField(max_length=8000, blank=True, null=True, verbose_name='Notas')
 
     @staticmethod
     def calcDeposit(dateTo=None):
@@ -519,15 +519,15 @@ class DepositWithdraw(models.Model):
         verbose_name = "Depositos/Reembolsos"
         verbose_name_plural = "Depositos/Reembolsos"
 
-    def __unicode__(self):
+    def __str__(self):
         return '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.broker.name
 
 
 class BrokerComissions(models.Model):
     date = models.DateField(blank=False, null=False, verbose_name='Fecha')
-    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1)
+    broker = models.ForeignKey(Broker, db_column='idBroker', verbose_name='Broker', default=1, on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=10, decimal_places=4, null=False, blank=False, verbose_name='Importe')
-    description  =  models.CharField(max_length=8000, blank=True, null=True, verbose_name='Notas')
+    description  =  models.TextField(max_length=8000, blank=True, null=True, verbose_name='Notas')
 
 
     class Meta:
@@ -536,14 +536,14 @@ class BrokerComissions(models.Model):
         verbose_name = "Comisiones globales"
         verbose_name_plural = "Comisiones globales"
 
-    def __unicode__(self):
+    def __str__(self):
         return '{:%d/%m/%Y}'.format(self.date) + ' - ' + self.broker.name
 
 
 class Alarm(models.Model):
-    share = models.ForeignKey(Share, db_column='idShare')
-    minPrice = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Límite Inferior')
-    maxPrice = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Límite Superior')
+    share = models.ForeignKey(Share, db_column='idShare', on_delete=models.PROTECT)
+    minPrice = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Limite Inferior')
+    maxPrice = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Limite Superior')
     changePriceLow = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Var. Inferior (%)')
     changePriceHigh = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True, verbose_name='Var. Superior (%)')
     active = models.BooleanField(blank=False, null=False, default=False)
@@ -554,7 +554,7 @@ class Alarm(models.Model):
         verbose_name = "Alarma"
         verbose_name_plural = "Alarmas"
 
-    def __unicode__(self):
+    def __str__(self):
         return self.share.name
 
 
@@ -579,6 +579,6 @@ class Summary(models.Model):
         verbose_name = "Resumen"
         verbose_name_plural = "Resumen"
 
-    def __unicode__(self):
+    def __str__(self):
         return '{:%d/%m/%Y}'.format(self.date)
 

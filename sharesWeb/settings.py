@@ -29,14 +29,13 @@ SECRET_KEY = '%=f0vw!$@8#!sanpppkx+c*xz!y!2_c$5-o8gku8bkxewb_h5e'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['cubieSrv', 'share.sergutpal.dynu.com']
-
+ALLOWED_HOSTS = ['cubieSrv', 'share.sergutpal.dynu.com', 'localhost', '127.0.0.1', '192.168.1.20']
 
 # Application definition
 
 INSTALLED_APPS = [
-#    'grappelli',
 #    'suit',
+#    'grappelli',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -89,9 +88,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'SHARE',
         'USER': 'root',
-        'PASSWORD': 'SGP24121976',
-        'HOST': 'localhost',   # Or an IP Address that your DB is hosted on
-        #'HOST': 'debian84',
+        'PASSWORD': 'SGp24121976',
+        'HOST': '192.168.1.20',   # Or an IP Address that your DB is hosted on
         'PORT': '3306',
     }
 }
@@ -137,3 +135,4 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 CELERY_PREFETCH_MULTIPLIER = 1
+CELERY_IMPORTS = ('sharesWebApp.tasks',)
